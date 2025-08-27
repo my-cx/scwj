@@ -3,483 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简易跨设备文件托管</title>
+    <title>极简文件托管</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#2eaadc',
-                        secondary: '#10b981',
-                        danger: '#ef4444',
-                    },
-                }
-            }
-        }
-    </script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-primary mb-2">简易文件托管</h1>
-            <p class="text-gray-600">跨设备访问你的文件</p>
-        </header>
-
+<body class="bg-gray-100 p-4 md:p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">文件托管</h1>
+        
         <!-- 认证区域 -->
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4 flex items-center">
-                <i class="fa fa-key text-primary mr-2"></i>
-                GitHub 认证
-            </h2>
+        <div class="mb-6">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">GitHub 令牌</label>
+                <input type="text" id="token" class="w-full p-2 border border-gray-300 rounded" 
+                       placeholder="输入包含gist权限的令牌">
+            </div>
             
             <div class="mb-4">
-                <label for="githubToken" class="block text-sm font-medium text-gray-700 mb-1">
-                    GitHub 访问令牌
-                </label>
-                <input type="password" id="githubToken" 
-                       placeholder="输入你的GitHub访问令牌"
-                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
-                <p class="text-xs text-gray-500 mt-1">
-                    令牌需要包含 "gist" 权限。<a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" class="text-primary">创建令牌</a>
-                </p>
-            </div>
-            
-            <div class="mb-2">
-                <label for="gistId" class="block text-sm font-medium text-gray-700 mb-1">
-                    文件存储ID (Gist ID)
-                </label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Gist ID</label>
                 <div class="flex">
-                    <input type="text" id="gistId" placeholder="输入或创建新的Gist ID" 
-                           class="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-primary focus:border-primary">
-                    <button id="createGistBtn" class="bg-secondary hover:bg-green-600 text-white px-4 py-2 rounded-r-md transition-colors">
-                        新建
-                    </button>
+                    <input type="text" id="gistId" class="flex-1 p-2 border border-gray-300 rounded-l" 
+                           placeholder="Gist ID">
+                    <button id="createGist" class="bg-green-500 text-white p-2 rounded-r">新建</button>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">
-                    保存此ID以便在其他设备上访问相同文件
-                </p>
             </div>
             
-            <button id="connectBtn" class="w-full bg-primary hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors mt-2">
-                连接并加载文件
-            </button>
-        </section>
-
+            <button id="connect" class="w-full bg-blue-500 text-white p-2 rounded mb-2">连接</button>
+            <div id="status" class="text-sm text-gray-500 text-center hidden"></div>
+        </div>
+        
         <!-- 上传区域 -->
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8" id="uploadSection" style="display: none;">
-            <h2 class="text-xl font-semibold mb-4 flex items-center">
-                <i class="fa fa-upload text-primary mr-2"></i>
-                上传文件
-            </h2>
-            
-            <div id="dropArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
-                <i class="fa fa-file-o text-5xl text-gray-400 mb-4"></i>
-                <p class="text-gray-600 mb-3">拖放文件到这里，或者点击选择文件</p>
-                <label class="bg-primary hover:bg-blue-600 text-white py-2 px-6 rounded-md inline-block cursor-pointer transition-colors">
-                    选择文件
-                    <input type="file" id="fileInput" class="hidden" multiple>
-                </label>
-            </div>
-            
-            <!-- 进度条 -->
-            <div id="progressContainer" class="mt-6 hidden">
-                <div class="flex justify-between text-sm mb-1">
-                    <span id="progressFileName">正在上传...</span>
-                    <span id="progressPercent">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="progressBar" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
-                </div>
-            </div>
-        </section>
-
+        <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded p-4 text-center mb-6 hidden">
+            <p class="mb-2">拖放文件到这里或点击选择</p>
+            <label class="bg-blue-500 text-white p-2 rounded inline-block cursor-pointer">
+                选择文件
+                <input type="file" id="fileInput" class="hidden" multiple>
+            </label>
+        </div>
+        
         <!-- 文件列表 -->
-        <section class="bg-white rounded-lg shadow-md p-6" id="filesSection" style="display: none;">
-            <h2 class="text-xl font-semibold mb-4 flex items-center">
-                <i class="fa fa-files-o text-primary mr-2"></i>
-                已上传文件
-            </h2>
-            
-            <div id="loadingIndicator" class="text-center py-8 hidden">
-                <i class="fa fa-spinner fa-spin text-2xl text-primary"></i>
-                <p class="mt-2 text-gray-600">加载中...</p>
+        <div id="filesArea" class="hidden">
+            <h2 class="font-bold mb-2">文件列表</h2>
+            <div id="loading" class="text-center py-4 hidden">
+                <i class="fa fa-spinner fa-spin"></i> 加载中...
             </div>
-            
-            <div id="emptyState" class="text-center py-12 hidden">
-                <i class="fa fa-folder-open-o text-5xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">暂无文件</p>
-            </div>
-            
-            <div id="filesList" class="space-y-3">
-                <!-- 文件列表将动态生成 -->
-            </div>
-        </section>
+            <div id="filesList" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <div id="noFiles" class="text-center py-4 text-gray-500 hidden">暂无文件</div>
+        </div>
     </div>
 
     <script>
-        // DOM元素
-        const githubTokenInput = document.getElementById('githubToken');
+        // 元素
+        const tokenInput = document.getElementById('token');
         const gistIdInput = document.getElementById('gistId');
-        const createGistBtn = document.getElementById('createGistBtn');
-        const connectBtn = document.getElementById('connectBtn');
-        const uploadSection = document.getElementById('uploadSection');
-        const filesSection = document.getElementById('filesSection');
-        const dropArea = document.getElementById('dropArea');
+        const createGistBtn = document.getElementById('createGist');
+        const connectBtn = document.getElementById('connect');
+        const statusEl = document.getElementById('status');
+        const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressFileName = document.getElementById('progressFileName');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
+        const filesArea = document.getElementById('filesArea');
+        const loadingEl = document.getElementById('loading');
         const filesList = document.getElementById('filesList');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const emptyState = document.getElementById('emptyState');
+        const noFilesEl = document.getElementById('noFiles');
         
-        // 全局变量
-        let githubToken = localStorage.getItem('githubToken') || '';
-        let gistId = localStorage.getItem('gistId') || '';
+        // 变量
+        let token, gistId;
         
-        // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            // 填充保存的令牌和Gist ID
-            if (githubToken) {
-                githubTokenInput.value = githubToken;
-            }
-            if (gistId) {
-                gistIdInput.value = gistId;
-            }
-            
-            setupEventListeners();
+        // 事件监听
+        createGistBtn.addEventListener('click', createGist);
+        connectBtn.addEventListener('click', connect);
+        fileInput.addEventListener('change', handleFiles);
+        
+        // 拖放支持
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('border-blue-500');
         });
         
-        // 设置事件监听
-        function setupEventListeners() {
-            // 连接按钮
-            connectBtn.addEventListener('click', connectAndLoad);
-            
-            // 创建Gist按钮
-            createGistBtn.addEventListener('click', createNewGist);
-            
-            // 拖放事件
-            dropArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropArea.classList.add('border-primary', 'bg-blue-50');
-            });
-            
-            dropArea.addEventListener('dragleave', () => {
-                dropArea.classList.remove('border-primary', 'bg-blue-50');
-            });
-            
-            dropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropArea.classList.remove('border-primary', 'bg-blue-50');
-                
-                if (e.dataTransfer.files.length) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
-            
-            // 点击上传区域
-            dropArea.addEventListener('click', () => {
-                if (!event.target.tagName === 'LABEL') {
-                    fileInput.click();
-                }
-            });
-            
-            // 文件选择变化
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) {
-                    handleFiles(e.target.files);
-                }
-            });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('border-blue-500');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('border-blue-500');
+            if (e.dataTransfer.files.length) {
+                handleFiles({ target: { files: e.dataTransfer.files } });
+            }
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 显示状态消息
+        function showStatus(message, isError = false) {
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            statusEl.classList.add(isError ? 'text-red-600' : 'text-green-600');
         }
         
-        // 连接并加载文件
-        function connectAndLoad() {
-            const token = githubTokenInput.value.trim();
-            const gistIdValue = gistIdInput.value.trim();
-            
+        // 创建新Gist
+        async function createGist() {
+            token = tokenInput.value.trim();
             if (!token) {
-                alert('请输入GitHub访问令牌');
-                return;
-            }
-            
-            if (!gistIdValue) {
-                alert('请输入Gist ID或创建新的存储');
-                return;
-            }
-            
-            // 保存到本地存储
-            githubToken = token;
-            gistId = gistIdValue;
-            localStorage.setItem('githubToken', githubToken);
-            localStorage.setItem('gistId', gistId);
-            
-            // 显示上传和文件区域
-            uploadSection.style.display = 'block';
-            filesSection.style.display = 'block';
-            
-            // 加载文件
-            loadFiles();
-        }
-        
-        // 创建新的Gist存储
-        async function createNewGist() {
-            const token = githubTokenInput.value.trim();
-            if (!token) {
-                alert('请先输入GitHub访问令牌');
+                showStatus('请先输入GitHub令牌', true);
                 return;
             }
             
             try {
-                // 显示加载状态
-                createGistBtn.disabled = true;
-                createGistBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 创建中';
-                
-                // 创建新的Gist
+                showStatus('正在创建Gist...');
                 const response = await axios.post('https://api.github.com/gists', {
-                    description: '简易文件托管存储',
+                    description: '文件存储',
                     public: false,
-                    files: {
-                        'readme.txt': {
-                            content: '这是简易文件托管的存储'
-                        }
-                    }
+                    files: { 'info.txt': { content: '文件存储根目录' } }
                 }, {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
+                    headers: { 'Authorization': `token ${token}` }
                 });
                 
-                // 填充Gist ID
                 gistIdInput.value = response.data.id;
-                alert('存储创建成功！Gist ID: ' + response.data.id);
+                showStatus('Gist创建成功！');
             } catch (error) {
-                console.error('创建Gist失败:', error);
-                alert('创建存储失败，请检查令牌是否有效且包含gist权限');
-            } finally {
-                createGistBtn.disabled = false;
-                createGistBtn.textContent = '新建';
+                console.error('创建Gist错误:', error);
+                showStatus(`创建失败: ${getErrorMsg(error)}`, true);
+            }
+        }
+        
+        // 连接并加载文件
+        async function connect() {
+            token = tokenInput.value.trim();
+            gistId = gistIdInput.value.trim();
+            
+            if (!token) {
+                showStatus('请输入GitHub令牌', true);
+                return;
+            }
+            
+            if (!gistId) {
+                showStatus('请输入Gist ID或点击新建', true);
+                return;
+            }
+            
+            try {
+                showStatus('正在连接...');
+                uploadArea.classList.remove('hidden');
+                filesArea.classList.remove('hidden');
+                loadFiles();
+            } catch (error) {
+                showStatus(`连接失败: ${getErrorMsg(error)}`, true);
             }
         }
         
         // 加载文件列表
         async function loadFiles() {
-            if (!githubToken || !gistId) return;
+            if (!token || !gistId) return;
             
-            // 显示加载状态
-            loadingIndicator.classList.remove('hidden');
-            emptyState.classList.add('hidden');
+            loadingEl.classList.remove('hidden');
+            noFilesEl.classList.add('hidden');
             filesList.innerHTML = '';
             
             try {
                 const response = await axios.get(`https://api.github.com/gists/${gistId}`, {
-                    headers: {
-                        'Authorization': `token ${githubToken}`
-                    }
+                    headers: { 'Authorization': `token ${token}` }
                 });
                 
                 const files = response.data.files;
-                displayFiles(files);
+                const fileNames = Object.keys(files).filter(name => name !== 'info.txt');
+                
+                if (fileNames.length === 0) {
+                    noFilesEl.classList.remove('hidden');
+                } else {
+                    fileNames.forEach(name => {
+                        const file = files[name];
+                        const size = formatSize(file.content.length * 0.75); // 估算实际大小
+                        
+                        const div = document.createElement('div');
+                        div.className = 'flex justify-between items-center p-2 border rounded';
+                        div.innerHTML = `
+                            <div>
+                                <div>${name}</div>
+                                <div class="text-xs text-gray-500">${size}</div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="download bg-green-100 p-1 rounded" data-name="${name}" data-url="${file.content}">
+                                    <i class="fa fa-download"></i>
+                                </button>
+                                <button class="delete bg-red-100 p-1 rounded" data-name="${name}">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                        filesList.appendChild(div);
+                    });
+                    
+                    // 添加下载和删除事件
+                    document.querySelectorAll('.download').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const a = document.createElement('a');
+                            a.href = e.target.closest('.download').dataset.url;
+                            a.download = e.target.closest('.download').dataset.name;
+                            a.click();
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            if (confirm(`确定删除 ${e.target.closest('.delete').dataset.name}?`)) {
+                                deleteFile(e.target.closest('.delete').dataset.name);
+                            }
+                        });
+                    });
+                }
+                
+                showStatus('连接成功');
             } catch (error) {
-                console.error('加载文件失败:', error);
-                alert('加载文件失败，请检查Gist ID和令牌是否正确');
+                console.error('加载文件错误:', error);
+                showStatus(`加载失败: ${getErrorMsg(error)}`, true);
+                noFilesEl.classList.remove('hidden');
             } finally {
-                loadingIndicator.classList.add('hidden');
+                loadingEl.classList.add('hidden');
             }
-        }
-        
-        // 显示文件列表
-        function displayFiles(files) {
-            filesList.innerHTML = '';
-            
-            // 过滤掉可能的元数据文件
-            const fileEntries = Object.entries(files).filter(([name]) => 
-                !name.startsWith('.'));
-            
-            if (fileEntries.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            
-            fileEntries.forEach(([name, fileData]) => {
-                // 估算文件大小
-                const contentLength = fileData.content ? fileData.content.length : 0;
-                const estimatedSize = Math.round((contentLength * 3) / 4); // 修正DataURL的大小
-                const fileSize = formatFileSize(estimatedSize);
-                
-                // 确定文件图标
-                let fileIcon = 'fa-file-o';
-                const mimeType = getMimeTypeFromDataURL(fileData.content);
-                if (mimeType.startsWith('image/')) fileIcon = 'fa-file-image-o';
-                else if (mimeType.startsWith('video/')) fileIcon = 'fa-file-video-o';
-                else if (mimeType.startsWith('audio/')) fileIcon = 'fa-file-audio-o';
-                else if (mimeType.includes('pdf')) fileIcon = 'fa-file-pdf-o';
-                else if (mimeType.startsWith('text/')) fileIcon = 'fa-file-text-o';
-                
-                // 创建文件元素
-                const fileElement = document.createElement('div');
-                fileElement.className = 'flex items-center justify-between p-3 border border-gray-100 rounded hover:bg-gray-50';
-                
-                fileElement.innerHTML = `
-                    <div class="flex items-center">
-                        <i class="fa ${fileIcon} text-primary mr-3"></i>
-                        <div>
-                            <div class="font-medium">${name}</div>
-                            <div class="text-sm text-gray-500">${fileSize}</div>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button class="download-btn text-secondary hover:text-green-700 p-2" title="下载">
-                            <i class="fa fa-download"></i>
-                        </button>
-                        <button class="delete-btn text-danger hover:text-red-700 p-2" title="删除">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                
-                // 下载按钮事件
-                fileElement.querySelector('.download-btn').addEventListener('click', () => {
-                    downloadFile(name, fileData.content);
-                });
-                
-                // 删除按钮事件
-                fileElement.querySelector('.delete-btn').addEventListener('click', () => {
-                    if (confirm(`确定要删除 ${name} 吗？`)) {
-                        deleteFile(name);
-                    }
-                });
-                
-                filesList.appendChild(fileElement);
-            });
         }
         
         // 处理文件上传
-        function handleFiles(files) {
-            Array.from(files).forEach(file => {
-                // 检查文件大小（10MB限制）
+        function handleFiles(e) {
+            Array.from(e.target.files).forEach(file => {
                 if (file.size > 10 * 1024 * 1024) {
-                    alert(`文件 ${file.name} 太大，不能超过10MB`);
+                    showStatus('文件不能超过10MB', true);
                     return;
                 }
-                
                 uploadFile(file);
             });
         }
         
-        // 上传文件到Gist
+        // 上传文件
         async function uploadFile(file) {
-            if (!githubToken || !gistId) return;
-            
-            // 显示进度条
-            progressContainer.classList.remove('hidden');
-            progressFileName.textContent = file.name;
-            progressBar.style.width = '0%';
-            progressPercent.textContent = '0%';
-            
             try {
-                // 读取文件内容为DataURL
+                showStatus(`正在上传 ${file.name}...`);
+                
+                // 读取文件
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 
-                reader.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = `${percent}%`;
-                        progressPercent.textContent = `${percent}%`;
-                    }
-                };
-                
                 reader.onload = async () => {
-                    // 先获取当前Gist内容
-                    const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
-                        headers: { 'Authorization': `token ${githubToken}` }
+                    // 获取当前Gist
+                    const gist = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `token ${token}` }
                     });
                     
-                    // 准备更新数据
-                    const files = { ...gistResponse.data.files };
+                    // 准备更新
+                    const files = { ...gist.data.files };
                     files[file.name] = { content: reader.result };
                     
                     // 更新Gist
-                    await axios.patch(`https://api.github.com/gists/${gistId}`, {
-                        files: files
-                    }, {
-                        headers: { 'Authorization': `token ${githubToken}` }
+                    await axios.patch(`https://api.github.com/gists/${gistId}`, { files }, {
+                        headers: { 'Authorization': `token ${token}` }
                     });
                     
-                    // 更新进度为100%
-                    progressBar.style.width = '100%';
-                    progressPercent.textContent = '100%';
-                    
-                    // 重新加载文件列表
-                    setTimeout(() => {
-                        progressContainer.classList.add('hidden');
-                        loadFiles();
-                    }, 500);
+                    showStatus(`上传 ${file.name} 成功`);
+                    loadFiles(); // 重新加载列表
                 };
             } catch (error) {
-                console.error('上传失败:', error);
-                alert('文件上传失败，请重试');
-                progressContainer.classList.add('hidden');
+                console.error('上传错误:', error);
+                showStatus(`上传失败: ${getErrorMsg(error)}`, true);
             }
         }
         
-        // 从Gist删除文件
+        // 删除文件
         async function deleteFile(filename) {
-            if (!githubToken || !gistId) return;
-            
             try {
-                // 获取当前Gist内容
-                const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
-                    headers: { 'Authorization': `token ${githubToken}` }
+                showStatus(`正在删除 ${filename}...`);
+                
+                // 获取当前Gist
+                const gist = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                    headers: { 'Authorization': `token ${token}` }
                 });
                 
-                // 准备更新数据（设置为null表示删除）
-                const files = { ...gistResponse.data.files };
+                // 准备更新（设置为null表示删除）
+                const files = { ...gist.data.files };
                 files[filename] = null;
                 
                 // 更新Gist
-                await axios.patch(`https://api.github.com/gists/${gistId}`, {
-                    files: files
-                }, {
-                    headers: { 'Authorization': `token ${githubToken}` }
+                await axios.patch(`https://api.github.com/gists/${gistId}`, { files }, {
+                    headers: { 'Authorization': `token ${token}` }
                 });
                 
-                // 重新加载文件列表
-                loadFiles();
+                showStatus(`删除 ${filename} 成功`);
+                loadFiles(); // 重新加载列表
             } catch (error) {
-                console.error('删除失败:', error);
-                alert('文件删除失败，请重试');
+                console.error('删除错误:', error);
+                showStatus(`删除失败: ${getErrorMsg(error)}`, true);
             }
         }
         
-        // 下载文件
-        function downloadFile(filename, dataURL) {
-            const link = document.createElement('a');
-            link.href = dataURL;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
         // 辅助函数：格式化文件大小
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
         }
         
-        // 辅助函数：从DataURL获取MIME类型
-        function getMimeTypeFromDataURL(dataURL) {
-            if (!dataURL) return 'application/octet-stream';
-            return dataURL.split(';')[0].split(':')[1];
+        // 辅助函数：提取错误信息
+        function getErrorMsg(error) {
+            if (error.response) {
+                if (error.response.status === 401) return '令牌无效或没有权限';
+                if (error.response.status === 404) return 'Gist ID不存在';
+                return `HTTP错误 ${error.response.status}`;
+            }
+            return error.message || '未知错误';
         }
     </script>
 </body>
