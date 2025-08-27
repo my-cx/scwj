@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简文件托管</title>
+    <title>增强版文件托管</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body class="bg-gray-100 p-4 md:p-8">
-    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">文件托管</h1>
+    <div class="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">文件托管中心</h1>
         
         <!-- 认证区域 -->
-        <div class="mb-6">
+        <div class="mb-6 p-4 border rounded-lg bg-gray-50">
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">GitHub 令牌</label>
                 <input type="text" id="token" class="w-full p-2 border border-gray-300 rounded" 
@@ -21,44 +21,73 @@
             </div>
             
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Gist ID</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Gist ID <span class="text-xs text-gray-500">(存储标识)</span></label>
                 <div class="flex">
                     <input type="text" id="gistId" class="flex-1 p-2 border border-gray-300 rounded-l" 
                            placeholder="Gist ID">
-                    <button id="createGist" class="bg-green-500 text-white p-2 rounded-r">新建</button>
+                    <button id="createGist" class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-r transition-colors">新建存储</button>
                 </div>
             </div>
             
-            <button id="connect" class="w-full bg-blue-500 text-white p-2 rounded mb-2">连接</button>
-            <div id="status" class="text-sm text-gray-500 text-center hidden"></div>
+            <div class="flex space-x-2">
+                <button id="connect" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition-colors">连接存储</button>
+                <button id="newStorage" class="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded transition-colors">新存储</button>
+            </div>
+            
+            <div id="status" class="text-sm mt-2 text-center hidden"></div>
         </div>
         
         <!-- 上传区域 -->
-        <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded p-4 text-center mb-6 hidden">
-            <p class="mb-2">拖放文件到这里或点击选择</p>
-            <label class="bg-blue-500 text-white p-2 rounded inline-block cursor-pointer">
-                选择文件
+        <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded p-6 text-center mb-6 hidden">
+            <i class="fa fa-cloud-upload text-4xl text-gray-400 mb-3"></i>
+            <p class="mb-3">拖放文件到这里或点击选择文件</p>
+            <label class="bg-blue-500 hover:bg-blue-600 text-white p-2 px-4 rounded inline-block cursor-pointer transition-colors">
+                <i class="fa fa-file-o mr-1"></i> 选择文件
                 <input type="file" id="fileInput" class="hidden" multiple>
             </label>
         </div>
         
-        <!-- 文件列表 -->
+        <!-- 文件管理区域 -->
         <div id="filesArea" class="hidden">
-            <h2 class="font-bold mb-2">文件列表</h2>
-            <div id="loading" class="text-center py-4 hidden">
-                <i class="fa fa-spinner fa-spin"></i> 加载中...
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="font-bold text-lg">文件列表</h2>
+                <div class="flex space-x-2">
+                    <button id="selectAll" class="text-sm bg-gray-200 hover:bg-gray-300 p-1 px-3 rounded transition-colors">
+                        <i class="fa fa-check-square-o mr-1"></i>全选
+                    </button>
+                    <button id="deleteSelected" class="text-sm bg-red-500 hover:bg-red-600 text-white p-1 px-3 rounded transition-colors">
+                        <i class="fa fa-trash mr-1"></i>删除所选
+                    </button>
+                    <button id="deleteAll" class="text-sm bg-red-700 hover:bg-red-800 text-white p-1 px-3 rounded transition-colors">
+                        <i class="fa fa-trash-o mr-1"></i>清空所有
+                    </button>
+                </div>
             </div>
-            <div id="filesList" class="space-y-2 max-h-60 overflow-y-auto"></div>
-            <div id="noFiles" class="text-center py-4 text-gray-500 hidden">暂无文件</div>
+            
+            <div id="loading" class="text-center py-8 hidden">
+                <i class="fa fa-spinner fa-spin text-2xl text-blue-500"></i>
+                <p class="mt-2 text-gray-500">加载中...</p>
+            </div>
+            
+            <div id="filesList" class="space-y-2 max-h-80 overflow-y-auto border rounded p-2"></div>
+            <div id="noFiles" class="text-center py-8 text-gray-500 hidden">
+                <i class="fa fa-folder-open-o text-4xl text-gray-300 mb-2"></i>
+                <p>当前存储中没有文件</p>
+            </div>
+            
+            <div class="mt-4 text-xs text-gray-500">
+                <p><i class="fa fa-info-circle mr-1"></i> 提示：如果文件无法正常下载，可能是编码问题，尝试重新上传该文件</p>
+            </div>
         </div>
     </div>
 
     <script>
-        // 元素
+        // DOM元素
         const tokenInput = document.getElementById('token');
         const gistIdInput = document.getElementById('gistId');
         const createGistBtn = document.getElementById('createGist');
         const connectBtn = document.getElementById('connect');
+        const newStorageBtn = document.getElementById('newStorage');
         const statusEl = document.getElementById('status');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -66,45 +95,78 @@
         const loadingEl = document.getElementById('loading');
         const filesList = document.getElementById('filesList');
         const noFilesEl = document.getElementById('noFiles');
+        const selectAllBtn = document.getElementById('selectAll');
+        const deleteSelectedBtn = document.getElementById('deleteSelected');
+        const deleteAllBtn = document.getElementById('deleteAll');
         
-        // 变量
+        // 全局变量
         let token, gistId;
+        let currentFiles = [];
         
-        // 事件监听
-        createGistBtn.addEventListener('click', createGist);
-        connectBtn.addEventListener('click', connect);
-        fileInput.addEventListener('change', handleFiles);
-        
-        // 拖放支持
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('border-blue-500');
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 尝试从本地存储加载之前的信息
+            const savedToken = localStorage.getItem('fileHostToken');
+            const savedGistId = localStorage.getItem('fileHostGistId');
+            if (savedToken) tokenInput.value = savedToken;
+            if (savedGistId) gistIdInput.value = savedGistId;
+            
+            // 绑定事件
+            bindEvents();
         });
         
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('border-blue-500');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('border-blue-500');
-            if (e.dataTransfer.files.length) {
-                handleFiles({ target: { files: e.dataTransfer.files } });
-            }
-        });
-        
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+        // 绑定事件处理函数
+        function bindEvents() {
+            createGistBtn.addEventListener('click', createGist);
+            connectBtn.addEventListener('click', connect);
+            newStorageBtn.addEventListener('click', resetStorage);
+            fileInput.addEventListener('change', handleFiles);
+            selectAllBtn.addEventListener('click', toggleSelectAll);
+            deleteSelectedBtn.addEventListener('click', deleteSelectedFiles);
+            deleteAllBtn.addEventListener('click', deleteAllFiles);
+            
+            // 拖放支持
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
+                if (e.dataTransfer.files.length) {
+                    handleFiles({ target: { files: e.dataTransfer.files } });
+                }
+            });
+            
+            uploadArea.addEventListener('click', (e) => {
+                if (!e.target.closest('label')) {
+                    fileInput.click();
+                }
+            });
+        }
         
         // 显示状态消息
         function showStatus(message, isError = false) {
             statusEl.textContent = message;
             statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
             statusEl.classList.add(isError ? 'text-red-600' : 'text-green-600');
+            
+            // 5秒后自动清除非错误消息
+            if (!isError) {
+                setTimeout(() => {
+                    if (statusEl.textContent === message) {
+                        statusEl.classList.add('hidden');
+                    }
+                }, 5000);
+            }
         }
         
-        // 创建新Gist
+        // 创建新的存储(Gist)
         async function createGist() {
             token = tokenInput.value.trim();
             if (!token) {
@@ -113,24 +175,38 @@
             }
             
             try {
-                showStatus('正在创建Gist...');
+                showStatus('正在创建新存储...');
+                createGistBtn.disabled = true;
+                createGistBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 创建中';
+                
                 const response = await axios.post('https://api.github.com/gists', {
-                    description: '文件存储',
+                    description: '文件托管存储',
                     public: false,
-                    files: { 'info.txt': { content: '文件存储根目录' } }
+                    files: { 
+                        'storage_info.txt': { 
+                            content: '这是文件托管系统的存储根目录\n创建时间: ' + new Date().toISOString()
+                        } 
+                    }
                 }, {
                     headers: { 'Authorization': `token ${token}` }
                 });
                 
                 gistIdInput.value = response.data.id;
-                showStatus('Gist创建成功！');
+                showStatus('新存储创建成功！点击"连接存储"即可使用');
+                
+                // 保存到本地存储
+                localStorage.setItem('fileHostToken', token);
+                localStorage.setItem('fileHostGistId', response.data.id);
             } catch (error) {
-                console.error('创建Gist错误:', error);
+                console.error('创建存储错误:', error);
                 showStatus(`创建失败: ${getErrorMsg(error)}`, true);
+            } finally {
+                createGistBtn.disabled = false;
+                createGistBtn.innerHTML = '新建存储';
             }
         }
         
-        // 连接并加载文件
+        // 连接到存储
         async function connect() {
             token = tokenInput.value.trim();
             gistId = gistIdInput.value.trim();
@@ -141,17 +217,41 @@
             }
             
             if (!gistId) {
-                showStatus('请输入Gist ID或点击新建', true);
+                showStatus('请输入Gist ID或点击"新建存储"', true);
                 return;
             }
             
             try {
-                showStatus('正在连接...');
+                showStatus('正在连接到存储...');
+                connectBtn.disabled = true;
+                
+                // 保存到本地存储
+                localStorage.setItem('fileHostToken', token);
+                localStorage.setItem('fileHostGistId', gistId);
+                
+                // 显示上传和文件区域
                 uploadArea.classList.remove('hidden');
                 filesArea.classList.remove('hidden');
-                loadFiles();
+                
+                // 加载文件列表
+                await loadFiles();
+                showStatus('连接成功，可以上传和管理文件了');
             } catch (error) {
+                console.error('连接错误:', error);
                 showStatus(`连接失败: ${getErrorMsg(error)}`, true);
+            } finally {
+                connectBtn.disabled = false;
+            }
+        }
+        
+        // 重置为新存储
+        function resetStorage() {
+            if (confirm('确定要切换到新存储吗？当前存储信息将被临时保存')) {
+                // 清空输入但保留在本地存储
+                gistIdInput.value = '';
+                showStatus('请输入新的Gist ID或创建新存储');
+                uploadArea.classList.add('hidden');
+                filesArea.classList.add('hidden');
             }
         }
         
@@ -159,9 +259,11 @@
         async function loadFiles() {
             if (!token || !gistId) return;
             
+            // 显示加载状态
             loadingEl.classList.remove('hidden');
             noFilesEl.classList.add('hidden');
             filesList.innerHTML = '';
+            currentFiles = [];
             
             try {
                 const response = await axios.get(`https://api.github.com/gists/${gistId}`, {
@@ -169,54 +271,53 @@
                 });
                 
                 const files = response.data.files;
-                const fileNames = Object.keys(files).filter(name => name !== 'info.txt');
+                // 过滤掉系统文件
+                const fileEntries = Object.entries(files).filter(([name]) => 
+                    !name.startsWith('storage_'));
                 
-                if (fileNames.length === 0) {
+                if (fileEntries.length === 0) {
                     noFilesEl.classList.remove('hidden');
                 } else {
-                    fileNames.forEach(name => {
-                        const file = files[name];
-                        const size = formatSize(file.content.length * 0.75); // 估算实际大小
+                    // 保存当前文件列表
+                    currentFiles = fileEntries.map(([name, file]) => ({
+                        name,
+                        content: file.content,
+                        size: file.size
+                    }));
+                    
+                    // 显示文件列表
+                    fileEntries.forEach(([name, file]) => {
+                        const size = formatSize(file.size || file.content.length * 0.75);
+                        const fileIcon = getFileIcon(name);
                         
                         const div = document.createElement('div');
-                        div.className = 'flex justify-between items-center p-2 border rounded';
+                        div.className = 'flex items-center p-2 border rounded hover:bg-gray-50';
+                        div.dataset.name = name;
                         div.innerHTML = `
-                            <div>
-                                <div>${name}</div>
+                            <input type="checkbox" class="file-select mr-3" data-name="${name}">
+                            <i class="fa ${fileIcon} text-blue-500 mr-3"></i>
+                            <div class="flex-1 min-w-0">
+                                <div class="truncate">${name}</div>
                                 <div class="text-xs text-gray-500">${size}</div>
                             </div>
-                            <div class="flex space-x-2">
-                                <button class="download bg-green-100 p-1 rounded" data-name="${name}" data-url="${file.content}">
-                                    <i class="fa fa-download"></i>
+                            <div class="flex space-x-1">
+                                <button class="download-btn p-1 hover:bg-green-100 rounded" data-name="${name}" data-url="${file.content}">
+                                    <i class="fa fa-download text-green-600"></i>
                                 </button>
-                                <button class="delete bg-red-100 p-1 rounded" data-name="${name}">
-                                    <i class="fa fa-trash"></i>
+                                <button class="reupload-btn p-1 hover:bg-yellow-100 rounded" data-name="${name}">
+                                    <i class="fa fa-refresh text-yellow-600"></i>
+                                </button>
+                                <button class="delete-btn p-1 hover:bg-red-100 rounded" data-name="${name}">
+                                    <i class="fa fa-trash text-red-600"></i>
                                 </button>
                             </div>
                         `;
                         filesList.appendChild(div);
                     });
                     
-                    // 添加下载和删除事件
-                    document.querySelectorAll('.download').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const a = document.createElement('a');
-                            a.href = e.target.closest('.download').dataset.url;
-                            a.download = e.target.closest('.download').dataset.name;
-                            a.click();
-                        });
-                    });
-                    
-                    document.querySelectorAll('.delete').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            if (confirm(`确定删除 ${e.target.closest('.delete').dataset.name}?`)) {
-                                deleteFile(e.target.closest('.delete').dataset.name);
-                            }
-                        });
-                    });
+                    // 绑定文件操作事件
+                    bindFileActions();
                 }
-                
-                showStatus('连接成功');
             } catch (error) {
                 console.error('加载文件错误:', error);
                 showStatus(`加载失败: ${getErrorMsg(error)}`, true);
@@ -226,43 +327,130 @@
             }
         }
         
+        // 绑定文件操作事件
+        function bindFileActions() {
+            // 下载文件
+            document.querySelectorAll('.download-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const name = e.target.closest('.download-btn').dataset.name;
+                    const url = e.target.closest('.download-btn').dataset.url;
+                    
+                    // 处理可能的编码问题 - 尝试两种下载方式
+                    try {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch (e) {
+                        // 备用下载方式
+                        showStatus('检测到编码问题，尝试备用下载方式...');
+                        const file = currentFiles.find(f => f.name === name);
+                        if (file) {
+                            try {
+                                const blob = dataURLToBlob(file.content);
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = name;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                            } catch (err) {
+                                showStatus('文件下载失败，可能存在编码问题，请尝试重新上传', true);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // 重新上传（解决编码问题）
+            document.querySelectorAll('.reupload-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const name = e.target.closest('.reupload-btn').dataset.name;
+                    if (confirm(`确定要重新上传 "${name}" 吗？这将覆盖现有文件`)) {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.onchange = (e) => {
+                            if (e.target.files.length) {
+                                // 用新文件覆盖同名文件
+                                uploadFile(e.target.files[0], true);
+                            }
+                        };
+                        input.click();
+                    }
+                });
+            });
+            
+            // 删除单个文件
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const name = e.target.closest('.delete-btn').dataset.name;
+                    if (confirm(`确定要删除 "${name}" 吗？`)) {
+                        deleteFiles([name]);
+                    }
+                });
+            });
+        }
+        
         // 处理文件上传
         function handleFiles(e) {
             Array.from(e.target.files).forEach(file => {
+                // 检查文件大小（10MB限制）
                 if (file.size > 10 * 1024 * 1024) {
-                    showStatus('文件不能超过10MB', true);
+                    showStatus(`文件 ${file.name} 太大，不能超过10MB`, true);
                     return;
                 }
-                uploadFile(file);
+                
+                // 检查是否已存在同名文件
+                const exists = currentFiles.some(f => f.name === file.name);
+                if (exists) {
+                    if (confirm(`文件 "${file.name}" 已存在，是否覆盖？`)) {
+                        uploadFile(file, true);
+                    }
+                } else {
+                    uploadFile(file);
+                }
             });
         }
         
         // 上传文件
-        async function uploadFile(file) {
+        async function uploadFile(file, overwrite = false) {
             try {
                 showStatus(`正在上传 ${file.name}...`);
                 
-                // 读取文件
+                // 读取文件内容为DataURL
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 
                 reader.onload = async () => {
-                    // 获取当前Gist
-                    const gist = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                    // 获取当前Gist内容
+                    const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
                         headers: { 'Authorization': `token ${token}` }
                     });
                     
-                    // 准备更新
-                    const files = { ...gist.data.files };
+                    // 准备更新数据
+                    const files = { ...gistResponse.data.files };
+                    
+                    // 如果是覆盖模式且文件存在，先删除旧文件
+                    if (overwrite && files[file.name]) {
+                        files[file.name] = null;
+                    }
+                    
+                    // 添加新文件
                     files[file.name] = { content: reader.result };
                     
                     // 更新Gist
-                    await axios.patch(`https://api.github.com/gists/${gistId}`, { files }, {
+                    await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                        files: files
+                    }, {
                         headers: { 'Authorization': `token ${token}` }
                     });
                     
-                    showStatus(`上传 ${file.name} 成功`);
-                    loadFiles(); // 重新加载列表
+                    showStatus(`文件 ${file.name} 上传成功`);
+                    loadFiles(); // 重新加载文件列表
                 };
             } catch (error) {
                 console.error('上传错误:', error);
@@ -270,27 +458,73 @@
             }
         }
         
-        // 删除文件
-        async function deleteFile(filename) {
-            try {
-                showStatus(`正在删除 ${filename}...`);
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.file-select');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+            
+            selectAllBtn.innerHTML = allChecked 
+                ? '<i class="fa fa-check-square-o mr-1"></i>全选' 
+                : '<i class="fa fa-square-o mr-1"></i>取消全选';
+        }
+        
+        // 删除选中的文件
+        function deleteSelectedFiles() {
+            const selected = Array.from(document.querySelectorAll('.file-select:checked'))
+                .map(cb => cb.dataset.name);
                 
-                // 获取当前Gist
-                const gist = await axios.get(`https://api.github.com/gists/${gistId}`, {
+            if (selected.length === 0) {
+                showStatus('请先选择要删除的文件', true);
+                return;
+            }
+            
+            if (confirm(`确定要删除选中的 ${selected.length} 个文件吗？`)) {
+                deleteFiles(selected);
+            }
+        }
+        
+        // 删除所有文件
+        function deleteAllFiles() {
+            if (currentFiles.length === 0) {
+                showStatus('当前没有文件可删除', true);
+                return;
+            }
+            
+            if (confirm(`确定要删除所有 ${currentFiles.length} 个文件吗？此操作不可恢复！`)) {
+                const allNames = currentFiles.map(f => f.name);
+                deleteFiles(allNames);
+            }
+        }
+        
+        // 删除指定文件列表
+        async function deleteFiles(fileNames) {
+            try {
+                showStatus(`正在删除 ${fileNames.length} 个文件...`);
+                
+                // 获取当前Gist内容
+                const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
                     headers: { 'Authorization': `token ${token}` }
                 });
                 
-                // 准备更新（设置为null表示删除）
-                const files = { ...gist.data.files };
-                files[filename] = null;
+                // 准备更新数据（设置为null表示删除）
+                const files = { ...gistResponse.data.files };
+                fileNames.forEach(name => {
+                    files[name] = null;
+                });
                 
                 // 更新Gist
-                await axios.patch(`https://api.github.com/gists/${gistId}`, { files }, {
+                await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                    files: files
+                }, {
                     headers: { 'Authorization': `token ${token}` }
                 });
                 
-                showStatus(`删除 ${filename} 成功`);
-                loadFiles(); // 重新加载列表
+                showStatus(`${fileNames.length} 个文件已成功删除`);
+                loadFiles(); // 重新加载文件列表
             } catch (error) {
                 console.error('删除错误:', error);
                 showStatus(`删除失败: ${getErrorMsg(error)}`, true);
@@ -304,14 +538,44 @@
             return (bytes / 1048576).toFixed(1) + ' MB';
         }
         
+        // 辅助函数：获取文件图标
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) return 'fa-file-image-o';
+            if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) return 'fa-file-video-o';
+            if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return 'fa-file-audio-o';
+            if (['pdf'].includes(ext)) return 'fa-file-pdf-o';
+            if (['doc', 'docx'].includes(ext)) return 'fa-file-word-o';
+            if (['xls', 'xlsx'].includes(ext)) return 'fa-file-excel-o';
+            if (['txt', 'md', 'html', 'css', 'js', 'json'].includes(ext)) return 'fa-file-text-o';
+            return 'fa-file-o';
+        }
+        
         // 辅助函数：提取错误信息
         function getErrorMsg(error) {
             if (error.response) {
-                if (error.response.status === 401) return '令牌无效或没有权限';
-                if (error.response.status === 404) return 'Gist ID不存在';
-                return `HTTP错误 ${error.response.status}`;
+                if (error.response.status === 401) return '令牌无效或没有权限（请确保令牌包含gist权限）';
+                if (error.response.status === 404) return '存储不存在（Gist ID错误）';
+                if (error.response.status === 403) return '访问被拒绝（令牌权限不足）';
+                return `服务器错误 (${error.response.status})`;
             }
+            if (error.message.includes('Network Error')) return '网络错误，请检查网络连接';
             return error.message || '未知错误';
+        }
+        
+        // 辅助函数：DataURL转Blob（解决编码问题）
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            
+            return new Blob([uInt8Array], { type: contentType });
         }
     </script>
 </body>
