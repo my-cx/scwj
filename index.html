@@ -3,431 +3,483 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简易文件托管</title>
+    <title>简易跨设备文件托管</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3b82f6',
+                        primary: '#2eaadc',
                         secondary: '#10b981',
                         danger: '#ef4444',
-                        dark: '#1e293b',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
                 }
             }
         }
     </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .file-drop-active {
-                @apply border-primary bg-blue-50;
-            }
-            .shadow-custom {
-                @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
-            }
-        }
-    </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
-    <header class="bg-white shadow-md">
-        <div class="container mx-auto px-4 py-6">
-            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary flex items-center">
-                <i class="fa fa-cloud-upload mr-3"></i>
-                简易文件托管
-            </h1>
-            <p class="text-gray-600 mt-1">上传小文件，随时随地访问</p>
-        </div>
-    </header>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-primary mb-2">简易文件托管</h1>
+            <p class="text-gray-600">跨设备访问你的文件</p>
+        </header>
 
-    <main class="container mx-auto px-4 py-8 max-w-5xl">
-        <!-- 文件上传区域 -->
-        <section class="mb-12 bg-white rounded-xl shadow-custom p-6">
+        <!-- 认证区域 -->
+        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-key text-primary mr-2"></i>
+                GitHub 认证
+            </h2>
+            
+            <div class="mb-4">
+                <label for="githubToken" class="block text-sm font-medium text-gray-700 mb-1">
+                    GitHub 访问令牌
+                </label>
+                <input type="password" id="githubToken" 
+                       placeholder="输入你的GitHub访问令牌"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary">
+                <p class="text-xs text-gray-500 mt-1">
+                    令牌需要包含 "gist" 权限。<a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" class="text-primary">创建令牌</a>
+                </p>
+            </div>
+            
+            <div class="mb-2">
+                <label for="gistId" class="block text-sm font-medium text-gray-700 mb-1">
+                    文件存储ID (Gist ID)
+                </label>
+                <div class="flex">
+                    <input type="text" id="gistId" placeholder="输入或创建新的Gist ID" 
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:ring-2 focus:ring-primary focus:border-primary">
+                    <button id="createGistBtn" class="bg-secondary hover:bg-green-600 text-white px-4 py-2 rounded-r-md transition-colors">
+                        新建
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                    保存此ID以便在其他设备上访问相同文件
+                </p>
+            </div>
+            
+            <button id="connectBtn" class="w-full bg-primary hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors mt-2">
+                连接并加载文件
+            </button>
+        </section>
+
+        <!-- 上传区域 -->
+        <section class="bg-white rounded-lg shadow-md p-6 mb-8" id="uploadSection" style="display: none;">
             <h2 class="text-xl font-semibold mb-4 flex items-center">
                 <i class="fa fa-upload text-primary mr-2"></i>
                 上传文件
             </h2>
             
-            <div id="fileDropArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300">
+            <div id="dropArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
                 <i class="fa fa-file-o text-5xl text-gray-400 mb-4"></i>
-                <p class="text-gray-600 mb-2">拖放文件到这里，或者</p>
-                <label class="bg-primary hover:bg-blue-600 text-white py-2 px-6 rounded-md inline-block cursor-pointer transition-all duration-300">
-                    <i class="fa fa-folder-open mr-1"></i> 选择文件
+                <p class="text-gray-600 mb-3">拖放文件到这里，或者点击选择文件</p>
+                <label class="bg-primary hover:bg-blue-600 text-white py-2 px-6 rounded-md inline-block cursor-pointer transition-colors">
+                    选择文件
                     <input type="file" id="fileInput" class="hidden" multiple>
                 </label>
-                <p class="text-sm text-gray-500 mt-4">支持大多数文件类型，单个文件不超过 10MB</p>
             </div>
             
-            <!-- 上传进度 -->
-            <div id="uploadProgress" class="mt-6 hidden">
+            <!-- 进度条 -->
+            <div id="progressContainer" class="mt-6 hidden">
                 <div class="flex justify-between text-sm mb-1">
                     <span id="progressFileName">正在上传...</span>
                     <span id="progressPercent">0%</span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div id="progressBar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
                 </div>
             </div>
         </section>
 
-        <!-- 已上传文件列表 -->
-        <section class="bg-white rounded-xl shadow-custom p-6">
-            <h2 class="text-xl font-semibold mb-6 flex items-center">
+        <!-- 文件列表 -->
+        <section class="bg-white rounded-lg shadow-md p-6" id="filesSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
                 <i class="fa fa-files-o text-primary mr-2"></i>
                 已上传文件
             </h2>
             
-            <div id="emptyState" class="text-center py-12 hidden">
-                <i class="fa fa-folder-open-o text-5xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">暂无上传的文件</p>
+            <div id="loadingIndicator" class="text-center py-8 hidden">
+                <i class="fa fa-spinner fa-spin text-2xl text-primary"></i>
+                <p class="mt-2 text-gray-600">加载中...</p>
             </div>
             
-            <div id="filesList" class="space-y-4">
-                <!-- 文件列表将通过JavaScript动态生成 -->
+            <div id="emptyState" class="text-center py-12 hidden">
+                <i class="fa fa-folder-open-o text-5xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500">暂无文件</p>
+            </div>
+            
+            <div id="filesList" class="space-y-3">
+                <!-- 文件列表将动态生成 -->
             </div>
         </section>
-    </main>
-
-    <footer class="bg-dark text-white py-8 mt-12">
-        <div class="container mx-auto px-4 text-center">
-            <p>简易文件托管 &copy; 2023</p>
-            <p class="text-gray-400 text-sm mt-2">文件存储在浏览器本地，清除缓存会导致文件丢失</p>
-        </div>
-    </footer>
+    </div>
 
     <script>
         // DOM元素
-        const fileDropArea = document.getElementById('fileDropArea');
+        const githubTokenInput = document.getElementById('githubToken');
+        const gistIdInput = document.getElementById('gistId');
+        const createGistBtn = document.getElementById('createGistBtn');
+        const connectBtn = document.getElementById('connectBtn');
+        const uploadSection = document.getElementById('uploadSection');
+        const filesSection = document.getElementById('filesSection');
+        const dropArea = document.getElementById('dropArea');
         const fileInput = document.getElementById('fileInput');
-        const uploadProgress = document.getElementById('uploadProgress');
-        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
         const progressFileName = document.getElementById('progressFileName');
+        const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
         const filesList = document.getElementById('filesList');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         const emptyState = document.getElementById('emptyState');
-
+        
+        // 全局变量
+        let githubToken = localStorage.getItem('githubToken') || '';
+        let gistId = localStorage.getItem('gistId') || '';
+        
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            loadFilesFromStorage();
+            // 填充保存的令牌和Gist ID
+            if (githubToken) {
+                githubTokenInput.value = githubToken;
+            }
+            if (gistId) {
+                gistIdInput.value = gistId;
+            }
+            
             setupEventListeners();
         });
-
-        // 设置事件监听器
+        
+        // 设置事件监听
         function setupEventListeners() {
-            // 拖放事件
-            fileDropArea.addEventListener('dragover', handleDragOver);
-            fileDropArea.addEventListener('dragleave', handleDragLeave);
-            fileDropArea.addEventListener('drop', handleDrop);
+            // 连接按钮
+            connectBtn.addEventListener('click', connectAndLoad);
             
-            // 点击上传区域触发文件选择
-            fileDropArea.addEventListener('click', () => {
-                if (!event.target.closest('label')) {
+            // 创建Gist按钮
+            createGistBtn.addEventListener('click', createNewGist);
+            
+            // 拖放事件
+            dropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropArea.classList.add('border-primary', 'bg-blue-50');
+            });
+            
+            dropArea.addEventListener('dragleave', () => {
+                dropArea.classList.remove('border-primary', 'bg-blue-50');
+            });
+            
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('border-primary', 'bg-blue-50');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            // 点击上传区域
+            dropArea.addEventListener('click', () => {
+                if (!event.target.tagName === 'LABEL') {
                     fileInput.click();
                 }
             });
             
-            // 文件选择变化事件
-            fileInput.addEventListener('change', handleFileSelect);
+            // 文件选择变化
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFiles(e.target.files);
+                }
+            });
         }
-
-        // 拖放处理函数
-        function handleDragOver(e) {
-            e.preventDefault();
-            fileDropArea.classList.add('file-drop-active');
-        }
-
-        function handleDragLeave() {
-            fileDropArea.classList.remove('file-drop-active');
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            fileDropArea.classList.remove('file-drop-active');
+        
+        // 连接并加载文件
+        function connectAndLoad() {
+            const token = githubTokenInput.value.trim();
+            const gistIdValue = gistIdInput.value.trim();
             
-            if (e.dataTransfer.files.length) {
-                handleFiles(e.dataTransfer.files);
+            if (!token) {
+                alert('请输入GitHub访问令牌');
+                return;
+            }
+            
+            if (!gistIdValue) {
+                alert('请输入Gist ID或创建新的存储');
+                return;
+            }
+            
+            // 保存到本地存储
+            githubToken = token;
+            gistId = gistIdValue;
+            localStorage.setItem('githubToken', githubToken);
+            localStorage.setItem('gistId', gistId);
+            
+            // 显示上传和文件区域
+            uploadSection.style.display = 'block';
+            filesSection.style.display = 'block';
+            
+            // 加载文件
+            loadFiles();
+        }
+        
+        // 创建新的Gist存储
+        async function createNewGist() {
+            const token = githubTokenInput.value.trim();
+            if (!token) {
+                alert('请先输入GitHub访问令牌');
+                return;
+            }
+            
+            try {
+                // 显示加载状态
+                createGistBtn.disabled = true;
+                createGistBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 创建中';
+                
+                // 创建新的Gist
+                const response = await axios.post('https://api.github.com/gists', {
+                    description: '简易文件托管存储',
+                    public: false,
+                    files: {
+                        'readme.txt': {
+                            content: '这是简易文件托管的存储'
+                        }
+                    }
+                }, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                // 填充Gist ID
+                gistIdInput.value = response.data.id;
+                alert('存储创建成功！Gist ID: ' + response.data.id);
+            } catch (error) {
+                console.error('创建Gist失败:', error);
+                alert('创建存储失败，请检查令牌是否有效且包含gist权限');
+            } finally {
+                createGistBtn.disabled = false;
+                createGistBtn.textContent = '新建';
             }
         }
-
-        // 文件选择处理
-        function handleFileSelect(e) {
-            if (e.target.files.length) {
-                handleFiles(e.target.files);
+        
+        // 加载文件列表
+        async function loadFiles() {
+            if (!githubToken || !gistId) return;
+            
+            // 显示加载状态
+            loadingIndicator.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            filesList.innerHTML = '';
+            
+            try {
+                const response = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                    headers: {
+                        'Authorization': `token ${githubToken}`
+                    }
+                });
+                
+                const files = response.data.files;
+                displayFiles(files);
+            } catch (error) {
+                console.error('加载文件失败:', error);
+                alert('加载文件失败，请检查Gist ID和令牌是否正确');
+            } finally {
+                loadingIndicator.classList.add('hidden');
             }
         }
-
-        // 处理文件
+        
+        // 显示文件列表
+        function displayFiles(files) {
+            filesList.innerHTML = '';
+            
+            // 过滤掉可能的元数据文件
+            const fileEntries = Object.entries(files).filter(([name]) => 
+                !name.startsWith('.'));
+            
+            if (fileEntries.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            fileEntries.forEach(([name, fileData]) => {
+                // 估算文件大小
+                const contentLength = fileData.content ? fileData.content.length : 0;
+                const estimatedSize = Math.round((contentLength * 3) / 4); // 修正DataURL的大小
+                const fileSize = formatFileSize(estimatedSize);
+                
+                // 确定文件图标
+                let fileIcon = 'fa-file-o';
+                const mimeType = getMimeTypeFromDataURL(fileData.content);
+                if (mimeType.startsWith('image/')) fileIcon = 'fa-file-image-o';
+                else if (mimeType.startsWith('video/')) fileIcon = 'fa-file-video-o';
+                else if (mimeType.startsWith('audio/')) fileIcon = 'fa-file-audio-o';
+                else if (mimeType.includes('pdf')) fileIcon = 'fa-file-pdf-o';
+                else if (mimeType.startsWith('text/')) fileIcon = 'fa-file-text-o';
+                
+                // 创建文件元素
+                const fileElement = document.createElement('div');
+                fileElement.className = 'flex items-center justify-between p-3 border border-gray-100 rounded hover:bg-gray-50';
+                
+                fileElement.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fa ${fileIcon} text-primary mr-3"></i>
+                        <div>
+                            <div class="font-medium">${name}</div>
+                            <div class="text-sm text-gray-500">${fileSize}</div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="download-btn text-secondary hover:text-green-700 p-2" title="下载">
+                            <i class="fa fa-download"></i>
+                        </button>
+                        <button class="delete-btn text-danger hover:text-red-700 p-2" title="删除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // 下载按钮事件
+                fileElement.querySelector('.download-btn').addEventListener('click', () => {
+                    downloadFile(name, fileData.content);
+                });
+                
+                // 删除按钮事件
+                fileElement.querySelector('.delete-btn').addEventListener('click', () => {
+                    if (confirm(`确定要删除 ${name} 吗？`)) {
+                        deleteFile(name);
+                    }
+                });
+                
+                filesList.appendChild(fileElement);
+            });
+        }
+        
+        // 处理文件上传
         function handleFiles(files) {
             Array.from(files).forEach(file => {
-                // 检查文件大小 (10MB)
+                // 检查文件大小（10MB限制）
                 if (file.size > 10 * 1024 * 1024) {
-                    alert(`文件 ${file.name} 太大，不能超过 10MB`);
+                    alert(`文件 ${file.name} 太大，不能超过10MB`);
                     return;
                 }
                 
                 uploadFile(file);
             });
         }
-
-        // 模拟上传文件（实际是保存到localStorage）
-        function uploadFile(file) {
+        
+        // 上传文件到Gist
+        async function uploadFile(file) {
+            if (!githubToken || !gistId) return;
+            
             // 显示进度条
-            uploadProgress.classList.remove('hidden');
+            progressContainer.classList.remove('hidden');
             progressFileName.textContent = file.name;
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
             
-            // 模拟上传进度
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 10;
-                progressBar.style.width = `${progress}%`;
-                progressPercent.textContent = `${progress}%`;
+            try {
+                // 读取文件内容为DataURL
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
                 
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    
-                    // 读取文件并保存
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        // 创建文件对象
-                        const fileData = {
-                            id: Date.now().toString(),
-                            name: file.name,
-                            type: file.type,
-                            size: file.size,
-                            content: e.target.result,
-                            date: new Date().toISOString()
-                        };
-                        
-                        // 保存到localStorage
-                        saveFileToStorage(fileData);
-                        
-                        // 更新文件列表
-                        addFileToDOM(fileData);
-                        
-                        // 重置进度条
-                        setTimeout(() => {
-                            uploadProgress.classList.add('hidden');
-                            progressBar.style.width = '0%';
-                        }, 500);
-                    };
-                    
-                    // 根据文件类型选择合适的读取方式
-                    if (file.type.startsWith('text/')) {
-                        reader.readAsText(file);
-                    } else {
-                        reader.readAsDataURL(file);
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressPercent.textContent = `${percent}%`;
                     }
-                }
-            }, 100);
-        }
-
-        // 保存文件到localStorage
-        function saveFileToStorage(file) {
-            let files = JSON.parse(localStorage.getItem('hostedFiles') || '[]');
-            files.push(file);
-            localStorage.setItem('hostedFiles', JSON.stringify(files));
-        }
-
-        // 从localStorage加载文件
-        function loadFilesFromStorage() {
-            const files = JSON.parse(localStorage.getItem('hostedFiles') || '[]');
-            
-            if (files.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            
-            // 按日期排序，最新的在前面
-            files.sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            files.forEach(file => {
-                addFileToDOM(file);
-            });
-        }
-
-        // 添加文件到DOM
-        function addFileToDOM(file) {
-            emptyState.classList.add('hidden');
-            
-            // 格式化文件大小
-            const fileSize = formatFileSize(file.size);
-            
-            // 格式化日期
-            const formattedDate = new Date(file.date).toLocaleString();
-            
-            // 确定文件图标
-            let fileIcon = 'fa-file-o';
-            if (file.type.startsWith('image/')) {
-                fileIcon = 'fa-file-image-o';
-            } else if (file.type.startsWith('video/')) {
-                fileIcon = 'fa-file-video-o';
-            } else if (file.type.startsWith('audio/')) {
-                fileIcon = 'fa-file-audio-o';
-            } else if (file.type.includes('pdf')) {
-                fileIcon = 'fa-file-pdf-o';
-            } else if (file.type.includes('word')) {
-                fileIcon = 'fa-file-word-o';
-            } else if (file.type.includes('excel')) {
-                fileIcon = 'fa-file-excel-o';
-            } else if (file.type.startsWith('text/')) {
-                fileIcon = 'fa-file-text-o';
-            }
-            
-            // 创建文件元素
-            const fileElement = document.createElement('div');
-            fileElement.className = 'flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors';
-            fileElement.dataset.id = file.id;
-            
-            fileElement.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fa ${fileIcon} text-primary text-xl mr-4"></i>
-                    <div>
-                        <h3 class="font-medium">${file.name}</h3>
-                        <div class="text-sm text-gray-500 flex items-center mt-1">
-                            <span>${fileSize}</span>
-                            <span class="mx-2">•</span>
-                            <span>${formattedDate}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button class="view-file-btn text-primary hover:text-blue-700 p-2 rounded hover:bg-blue-50 transition-colors" 
-                            title="预览文件">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="download-file-btn text-secondary hover:text-green-700 p-2 rounded hover:bg-green-50 transition-colors"
-                            title="下载文件">
-                        <i class="fa fa-download"></i>
-                    </button>
-                    <button class="delete-file-btn text-danger hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors"
-                            title="删除文件">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            // 添加事件监听器
-            fileElement.querySelector('.download-file-btn').addEventListener('click', () => {
-                downloadFile(file);
-            });
-            
-            fileElement.querySelector('.delete-file-btn').addEventListener('click', () => {
-                deleteFile(file.id);
-                fileElement.remove();
+                };
                 
-                // 检查是否还有文件
-                if (filesList.children.length === 0) {
-                    emptyState.classList.remove('hidden');
-                }
-            });
-            
-            fileElement.querySelector('.view-file-btn').addEventListener('click', () => {
-                viewFile(file);
-            });
-            
-            filesList.prepend(fileElement);
+                reader.onload = async () => {
+                    // 先获取当前Gist内容
+                    const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `token ${githubToken}` }
+                    });
+                    
+                    // 准备更新数据
+                    const files = { ...gistResponse.data.files };
+                    files[file.name] = { content: reader.result };
+                    
+                    // 更新Gist
+                    await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                        files: files
+                    }, {
+                        headers: { 'Authorization': `token ${githubToken}` }
+                    });
+                    
+                    // 更新进度为100%
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    
+                    // 重新加载文件列表
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                        loadFiles();
+                    }, 500);
+                };
+            } catch (error) {
+                console.error('上传失败:', error);
+                alert('文件上传失败，请重试');
+                progressContainer.classList.add('hidden');
+            }
         }
-
+        
+        // 从Gist删除文件
+        async function deleteFile(filename) {
+            if (!githubToken || !gistId) return;
+            
+            try {
+                // 获取当前Gist内容
+                const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
+                    headers: { 'Authorization': `token ${githubToken}` }
+                });
+                
+                // 准备更新数据（设置为null表示删除）
+                const files = { ...gistResponse.data.files };
+                files[filename] = null;
+                
+                // 更新Gist
+                await axios.patch(`https://api.github.com/gists/${gistId}`, {
+                    files: files
+                }, {
+                    headers: { 'Authorization': `token ${githubToken}` }
+                });
+                
+                // 重新加载文件列表
+                loadFiles();
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('文件删除失败，请重试');
+            }
+        }
+        
         // 下载文件
-        function downloadFile(file) {
+        function downloadFile(filename, dataURL) {
             const link = document.createElement('a');
-            link.href = file.content;
-            link.download = file.name;
+            link.href = dataURL;
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
-
-        // 预览文件
-        function viewFile(file) {
-            // 对于图片，显示预览
-            if (file.type.startsWith('image/')) {
-                const previewWindow = window.open('', '_blank');
-                previewWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>预览: ${file.name}</title>
-                        <style>
-                            body { margin: 0; padding: 20px; background: #f0f0f0; text-align: center; }
-                            img { max-width: 90%; max-height: 90vh; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
-                            .info { margin-top: 20px; color: #666; }
-                        </style>
-                    </head>
-                    <body>
-                        <img src="${file.content}" alt="${file.name}">
-                        <div class="info">
-                            <p>${file.name} (${formatFileSize(file.size)})</p>
-                        </div>
-                    </body>
-                    </html>
-                `);
-                previewWindow.document.close();
-            } 
-            // 对于文本文件，显示内容
-            else if (file.type.startsWith('text/')) {
-                const previewWindow = window.open('', '_blank');
-                previewWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>预览: ${file.name}</title>
-                        <style>
-                            body { margin: 0; padding: 20px; background: #fff; }
-                            pre { white-space: pre-wrap; word-wrap: break-word; }
-                            .info { margin-bottom: 20px; color: #666; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="info">
-                            <p>${file.name} (${formatFileSize(file.size)})</p>
-                        </div>
-                        <pre>${escapeHtml(file.content)}</pre>
-                    </body>
-                    </html>
-                `);
-                previewWindow.document.close();
-            } 
-            // 其他类型文件，提示下载
-            else {
-                if (confirm(`无法预览 ${file.name}，是否下载该文件？`)) {
-                    downloadFile(file);
-                }
-            }
-        }
-
-        // 删除文件
-        function deleteFile(fileId) {
-            let files = JSON.parse(localStorage.getItem('hostedFiles') || '[]');
-            files = files.filter(file => file.id !== fileId);
-            localStorage.setItem('hostedFiles', JSON.stringify(files));
-        }
-
-        // 格式化文件大小
+        
+        // 辅助函数：格式化文件大小
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const sizes = ['Bytes', 'KB', 'MB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
-
-        // HTML转义
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        
+        // 辅助函数：从DataURL获取MIME类型
+        function getMimeTypeFromDataURL(dataURL) {
+            if (!dataURL) return 'application/octet-stream';
+            return dataURL.split(';')[0].split(':')[1];
         }
     </script>
 </body>
