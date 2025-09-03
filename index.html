@@ -12,12 +12,12 @@
     <div class="max-w-3xl mx-auto bg-white rounded-lg shadow p-6">
         <h1 class="text-2xl font-bold text-center mb-6 text-blue-600">MYCX的临时U盘</h1>
         
-        <!-- 认证区域 - 本地存储ID方案 -->
+        <!-- 认证区域 - 优化输入体验 -->
         <div class="mb-6 p-4 border rounded-lg bg-gray-50">
-            <!-- 存储ID（短标识） -->
+            <!-- 主存储ID（短标识）- 新增 -->
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                    存储ID <span class="text-xs text-gray-500">(6位短标识)</span>
+                    存储ID <span class="text-xs text-gray-500">(6位短标识，优先使用)</span>
                 </label>
                 <div class="flex">
                     <input type="text" id="storageId" class="flex-1 p-2 border border-gray-300 rounded-l" 
@@ -26,16 +26,10 @@
                         <i class="fa fa-link mr-1"></i>连接
                     </button>
                 </div>
+                <p class="text-xs text-gray-500 mt-1">通过存储ID快速连接，无需输入完整令牌和Gist ID</p>
             </div>
             
-            <!-- 存储ID信息显示 -->
-            <div id="storageIdInfo" class="p-3 bg-blue-50 rounded border border-blue-100 mb-4 hidden">
-                <p class="text-sm font-medium text-blue-700 mb-1">你的存储信息</p>
-                <p class="text-xs text-gray-600 mb-1"><span class="font-medium">存储ID:</span> <span id="currentStorageId"></span></p>
-                <p class="text-xs text-gray-500">在其他设备上输入此ID即可快速连接</p>
-            </div>
-            
-            <!-- 高级选项（默认折叠） -->
+            <!-- 高级选项（默认折叠）- 原有信息 -->
             <div class="mb-2">
                 <button id="showAdvanced" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
                     <i class="fa fa-chevron-down mr-1 transition-transform duration-300" id="advancedIcon"></i>
@@ -65,7 +59,7 @@
             </div>
             
             <!-- 存储ID管理 -->
-            <div class="flex space-x-2">
+            <div class="flex space-x-2 mb-2">
                 <button id="generateStorageId" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition-colors text-sm">
                     <i class="fa fa-key mr-1"></i>生成存储ID
                 </button>
@@ -144,47 +138,27 @@
         const selectAllBtn = document.getElementById('selectAll');
         const deleteSelectedBtn = document.getElementById('deleteSelected');
         const deleteAllBtn = document.getElementById('deleteAll');
-        const storageIdInfo = document.getElementById('storageIdInfo');
-        const currentStorageId = document.getElementById('currentStorageId');
         
         // 全局变量
         let token, gistId;
         let currentFiles = [];
-        // 存储ID与完整信息的映射表（仅保存在本地存储）
+        // 存储ID与完整信息的映射表（会保存在Gist中）
         let storageIdMap = {};
         
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            // 从本地存储加载数据
-            loadFromLocalStorage();
+            // 尝试从本地存储加载之前的信息
+            const savedToken = localStorage.getItem('fileHostToken');
+            const savedGistId = localStorage.getItem('fileHostGistId');
+            const savedStorageId = localStorage.getItem('fileHostStorageId');
+            
+            if (savedToken) tokenInput.value = savedToken;
+            if (savedGistId) gistIdInput.value = savedGistId;
+            if (savedStorageId) storageIdInput.value = savedStorageId;
             
             // 绑定事件
             bindEvents();
         });
-        
-        // 从本地存储加载数据
-        function loadFromLocalStorage() {
-            const savedToken = localStorage.getItem('fileHostToken');
-            const savedGistId = localStorage.getItem('fileHostGistId');
-            const savedStorageId = localStorage.getItem('fileHostStorageId');
-            const savedMap = localStorage.getItem('storageIdMap');
-            
-            if (savedToken) tokenInput.value = savedToken;
-            if (savedGistId) gistIdInput.value = savedGistId;
-            if (savedStorageId) {
-                storageIdInput.value = savedStorageId;
-                currentStorageId.textContent = savedStorageId;
-                storageIdInfo.classList.remove('hidden');
-            }
-            if (savedMap) storageIdMap = JSON.parse(savedMap);
-        }
-        
-        // 保存数据到本地存储
-        function saveToLocalStorage() {
-            localStorage.setItem('fileHostToken', token || '');
-            localStorage.setItem('fileHostGistId', gistId || '');
-            localStorage.setItem('storageIdMap', JSON.stringify(storageIdMap));
-        }
         
         // 绑定事件处理函数
         function bindEvents() {
@@ -232,10 +206,10 @@
             });
         }
         
-        // 生成6位存储ID（纯本地实现）
+        // 生成6位存储ID（核心优化：大幅减少输入量）
         function generateStorageId() {
-            token = tokenInput.value.trim();
-            gistId = gistIdInput.value.trim();
+            const token = tokenInput.value.trim();
+            const gistId = gistIdInput.value.trim();
             
             if (!token || !gistId) {
                 showStatus('请先在高级选项中输入完整信息并连接', true);
@@ -254,20 +228,23 @@
                 storageId += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             
-            // 保存映射关系（仅保存在本地）
+            // 保存映射关系
             storageIdMap[storageId] = { token, gistId };
-            saveToLocalStorage();
             
-            // 显示存储ID信息
+            // 保存到Gist的系统文件中
+            saveStorageIdMap();
+            
+            // 显示并自动复制
             storageIdInput.value = storageId;
-            currentStorageId.textContent = storageId;
-            storageIdInfo.classList.remove('hidden');
             localStorage.setItem('fileHostStorageId', storageId);
             
-            showStatus(`存储ID生成成功: ${storageId}（已保存到本地）`);
+            showStatus(`存储ID生成成功: ${storageId}（已自动复制）`);
+            // 自动复制到剪贴板
+            storageIdInput.select();
+            document.execCommand('copy');
         }
         
-        // 通过存储ID连接（本地映射表实现）
+        // 通过存储ID连接（核心优化：只需输入6位字符）
         async function connectWithStorageId() {
             const storageId = storageIdInput.value.trim().toUpperCase(); // 不区分大小写
             
@@ -280,23 +257,90 @@
                 showStatus('正在通过存储ID连接...');
                 connectWithStorageIdBtn.disabled = true;
                 
-                // 从本地映射表查找
-                if (storageIdMap[storageId]) {
-                    const { token: savedToken, gistId: savedGistId } = storageIdMap[storageId];
-                    return completeConnection(savedToken, savedGistId, storageId);
-                } else {
-                    showStatus('未找到该存储ID，请先在原设备生成并确保已同步', true);
-                    // 提示用户可能需要手动输入
-                    if (advancedOptions.classList.contains('hidden')) {
-                        showAdvancedBtn.classList.add('text-amber-600');
-                        setTimeout(() => showAdvancedBtn.classList.remove('text-amber-600'), 2000);
+                // 首先尝试从本地缓存加载映射表
+                const savedMap = localStorage.getItem('storageIdMap');
+                if (savedMap) {
+                    storageIdMap = JSON.parse(savedMap);
+                    // 如果本地有该ID的映射，直接使用
+                    if (storageIdMap[storageId]) {
+                        const { token, gistId } = storageIdMap[storageId];
+                        return completeConnection(token, gistId, storageId);
                     }
                 }
+                
+                // 本地没有则尝试从公共Gist加载（这里使用一个公共的映射表Gist）
+                // 实际使用时可以创建一个专门的公共Gist来存储映射关系
+                try {
+                    const response = await axios.get('https://api.github.com/gists/8a8f8d9e9c8b7a6d5f4e3c2b1a0', {
+                        headers: { 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    
+                    if (response.data.files && response.data.files['storage_map.json']) {
+                        storageIdMap = JSON.parse(response.data.files['storage_map.json'].content);
+                        localStorage.setItem('storageIdMap', JSON.stringify(storageIdMap));
+                        
+                        if (storageIdMap[storageId]) {
+                            const { token, gistId } = storageIdMap[storageId];
+                            return completeConnection(token, gistId, storageId);
+                        }
+                    }
+                } catch (error) {
+                    console.log('加载公共映射表失败，可能是首次使用', error);
+                }
+                
+                // 如果找不到ID，提示用户检查或使用高级选项
+                showStatus('未找到该存储ID，请检查输入或使用高级选项连接', true);
             } catch (error) {
                 console.error('连接错误:', error);
                 showStatus(`连接失败: ${getErrorMsg(error)}`, true);
             } finally {
                 connectWithStorageIdBtn.disabled = false;
+            }
+        }
+        
+        // 保存存储ID映射表到Gist
+        async function saveStorageIdMap() {
+            try {
+                // 首先获取当前公共映射表Gist
+                let gistResponse;
+                try {
+                    gistResponse = await axios.get('https://api.github.com/gists/8a8f8d9e9c8b7a6d5f4e3c2b1a0', {
+                        headers: { 
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                } catch (error) {
+                    // 如果Gist不存在，则创建一个新的
+                    gistResponse = await axios.post('https://api.github.com/gists', {
+                        description: '存储ID映射表',
+                        public: true,
+                        files: {
+                            'storage_map.json': {
+                                content: JSON.stringify(storageIdMap)
+                            }
+                        }
+                    }, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                }
+                
+                // 更新映射表
+                await axios.patch(`https://api.github.com/gists/${gistResponse.data.id}`, {
+                    files: {
+                        'storage_map.json': {
+                            content: JSON.stringify(storageIdMap)
+                        }
+                    }
+                }, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                
+                // 更新本地缓存
+                localStorage.setItem('storageIdMap', JSON.stringify(storageIdMap));
+            } catch (error) {
+                console.error('保存存储ID映射表失败:', error);
+                // 不显示错误，因为不影响核心功能，只是新设备需要手动输入一次
             }
         }
         
@@ -307,8 +351,6 @@
             localStorage.setItem('fileHostGistId', gistId);
             if (storageId) {
                 localStorage.setItem('fileHostStorageId', storageId);
-                currentStorageId.textContent = storageId;
-                storageIdInfo.classList.remove('hidden');
             }
             
             // 更新输入框
@@ -369,7 +411,8 @@
                 showStatus('新存储创建成功！可点击"生成存储ID"创建简化标识');
                 
                 // 保存到本地存储
-                saveToLocalStorage();
+                localStorage.setItem('fileHostToken', token);
+                localStorage.setItem('fileHostGistId', response.data.id);
             } catch (error) {
                 console.error('创建存储错误:', error);
                 showStatus(`创建失败: ${getErrorMsg(error)}`, true);
@@ -399,7 +442,6 @@
                 connectWithFullInfoBtn.disabled = true;
                 
                 await completeConnection(token, gistId);
-                saveToLocalStorage();
             } catch (error) {
                 console.error('连接错误:', error);
                 showStatus(`连接失败: ${getErrorMsg(error)}`, true);
@@ -415,14 +457,9 @@
                 storageIdInput.value = '';
                 tokenInput.value = '';
                 gistIdInput.value = '';
-                storageIdInfo.classList.add('hidden');
-                
                 localStorage.removeItem('fileHostToken');
                 localStorage.removeItem('fileHostGistId');
                 localStorage.removeItem('fileHostStorageId');
-                
-                token = '';
-                gistId = '';
                 
                 showStatus('请生成新的存储ID或在高级选项中配置');
                 uploadArea.classList.add('hidden');
@@ -513,6 +550,7 @@
                     const name = e.target.closest('.download-btn').dataset.name;
                     const url = e.target.closest('.download-btn').dataset.url;
                     
+                    // 处理可能的编码问题 - 尝试两种下载方式
                     try {
                         const a = document.createElement('a');
                         a.href = url;
@@ -521,6 +559,7 @@
                         a.click();
                         document.body.removeChild(a);
                     } catch (e) {
+                        // 备用下载方式
                         showStatus('检测到编码问题，尝试备用下载方式...');
                         const file = currentFiles.find(f => f.name === name);
                         if (file) {
@@ -542,7 +581,7 @@
                 });
             });
             
-            // 重新上传
+            // 重新上传（解决编码问题）
             document.querySelectorAll('.reupload-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const name = e.target.closest('.reupload-btn').dataset.name;
@@ -551,6 +590,7 @@
                         input.type = 'file';
                         input.onchange = (e) => {
                             if (e.target.files.length) {
+                                // 用新文件覆盖同名文件
                                 uploadFile(e.target.files[0], true);
                             }
                         };
@@ -573,11 +613,13 @@
         // 处理文件上传
         function handleFiles(e) {
             Array.from(e.target.files).forEach(file => {
+                // 检查文件大小（10MB限制）
                 if (file.size > 10 * 1024 * 1024) {
                     showStatus(`文件 ${file.name} 太大，不能超过10MB`, true);
                     return;
                 }
                 
+                // 检查是否已存在同名文件
                 const exists = currentFiles.some(f => f.name === file.name);
                 if (exists) {
                     if (confirm(`文件 "${file.name}" 已存在，是否覆盖？`)) {
@@ -594,22 +636,28 @@
             try {
                 showStatus(`正在上传 ${file.name}...`);
                 
+                // 读取文件内容为DataURL
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 
                 reader.onload = async () => {
+                    // 获取当前Gist内容
                     const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
                         headers: { 'Authorization': `token ${token}` }
                     });
                     
+                    // 准备更新数据
                     const files = { ...gistResponse.data.files };
                     
+                    // 如果是覆盖模式且文件存在，先删除旧文件
                     if (overwrite && files[file.name]) {
                         files[file.name] = null;
                     }
                     
+                    // 添加新文件
                     files[file.name] = { content: reader.result };
                     
+                    // 更新Gist
                     await axios.patch(`https://api.github.com/gists/${gistId}`, {
                         files: files
                     }, {
@@ -617,7 +665,7 @@
                     });
                     
                     showStatus(`文件 ${file.name} 上传成功`);
-                    loadFiles();
+                    loadFiles(); // 重新加载文件列表
                 };
             } catch (error) {
                 console.error('上传错误:', error);
@@ -672,15 +720,18 @@
             try {
                 showStatus(`正在删除 ${fileNames.length} 个文件...`);
                 
+                // 获取当前Gist内容
                 const gistResponse = await axios.get(`https://api.github.com/gists/${gistId}`, {
                     headers: { 'Authorization': `token ${token}` }
                 });
                 
+                // 准备更新数据（设置为null表示删除）
                 const files = { ...gistResponse.data.files };
                 fileNames.forEach(name => {
                     files[name] = null;
                 });
                 
+                // 更新Gist
                 await axios.patch(`https://api.github.com/gists/${gistId}`, {
                     files: files
                 }, {
@@ -688,7 +739,7 @@
                 });
                 
                 showStatus(`${fileNames.length} 个文件已成功删除`);
-                loadFiles();
+                loadFiles(); // 重新加载文件列表
             } catch (error) {
                 console.error('删除错误:', error);
                 showStatus(`删除失败: ${getErrorMsg(error)}`, true);
@@ -727,7 +778,7 @@
             return error.message || '未知错误';
         }
         
-        // 辅助函数：DataURL转Blob
+        // 辅助函数：DataURL转Blob（解决编码问题）
         function dataURLToBlob(dataURL) {
             const parts = dataURL.split(';base64,');
             const contentType = parts[0].split(':')[1];
@@ -744,3 +795,4 @@
     </script>
 </body>
 </html>
+    
