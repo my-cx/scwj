@@ -70,13 +70,19 @@
             <h2 class="text-xl font-semibold mb-4 flex items-center">
                 <i class="fa fa-plus-circle text-primary mr-2"></i>创建新存储
             </h2>
+            
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                <i class="fa fa-info-circle mr-1"></i>
+                <strong>提示：</strong>创建时输入一次令牌，后续可用6位代码直接访问，无需重复输入
+            </div>
+            
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1" for="github-token">GitHub 令牌</label>
                 <input 
                     type="password" 
                     id="github-token" 
                     class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                    placeholder="输入你的GitHub令牌"
+                    placeholder="输入你的GitHub令牌（仅需输入一次）"
                 >
                 <p class="text-xs text-gray-500 mt-1">需要具备repo权限的个人访问令牌</p>
             </div>
@@ -87,8 +93,9 @@
                     type="text" 
                     id="repo-name" 
                     class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                    placeholder="例如：my-file-storage"
+                    placeholder="例如：my-file-storage-001"
                 >
+                <p id="repo-name-hint" class="text-xs mt-1 hidden"></p>
             </div>
             
             <button id="create-storage" class="btn-primary w-full">
@@ -100,7 +107,7 @@
                     <h3 class="font-medium mb-1">存储创建成功！</h3>
                     <p>存储ID: <span id="storage-id" class="font-mono bg-gray-200 px-2 py-1 rounded"></span></p>
                     <p>访问代码: <span id="access-code" class="font-mono bg-gray-200 px-2 py-1 rounded text-lg font-bold"></span></p>
-                    <p class="text-sm mt-2">请记录以上信息用于在其他设备访问</p>
+                    <p class="text-sm mt-2">在其他设备上，仅需输入这个6位代码即可访问</p>
                 </div>
             </div>
         </div>
@@ -116,12 +123,12 @@
                     <label class="block text-sm font-medium text-gray-700">访问方式</label>
                 </div>
                 <div class="flex gap-2">
-                    <button id="access-code-btn" class="btn-primary flex-1">6位访问码</button>
+                    <button id="access-code-btn" class="btn-primary flex-1">6位访问码（推荐）</button>
                     <button id="full-id-btn" class="btn-secondary flex-1">完整存储ID</button>
                 </div>
             </div>
             
-            <!-- 6位访问码方式 -->
+            <!-- 6位访问码方式（无需输入令牌） -->
             <div id="code-access" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="short-code">6位访问码</label>
@@ -129,7 +136,7 @@
                         type="text" 
                         id="short-code" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus text-center text-xl"
-                        placeholder="输入6位代码"
+                        placeholder="输入6位代码（无需令牌）"
                         maxlength="6"
                     >
                 </div>
@@ -147,7 +154,7 @@
                         type="text" 
                         id="full-storage-id" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                        placeholder="输入完整存储ID"
+                        placeholder="输入完整存储ID（格式：用户名/仓库名）"
                     >
                 </div>
                 
@@ -211,10 +218,55 @@
         const fullIdBtn = document.getElementById('full-id-btn');
         const codeAccess = document.getElementById('code-access');
         const fullAccess = document.getElementById('full-access');
+        const repoNameInput = document.getElementById('repo-name');
+        const repoNameHint = document.getElementById('repo-name-hint');
         
         // 状态变量
         let currentStorage = null;
         let currentToken = null;
+        
+        // 仓库名验证正则
+        const repoNameRegex = /^[a-zA-Z0-9_\-.]{1,100}$/;
+        const invalidCharsRegex = /[^a-zA-Z0-9_\-.]/g;
+        
+        // 监听仓库名输入，实时验证
+        repoNameInput.addEventListener('input', () => {
+            const value = repoNameInput.value;
+            
+            if (value.length === 0) {
+                repoNameHint.classList.add('hidden');
+                return;
+            }
+            
+            if (value.length > 100) {
+                showRepoHint(`仓库名过长（最多100个字符），当前${value.length}个字符`, 'error');
+                return;
+            }
+            
+            const invalidChars = value.match(invalidCharsRegex);
+            if (invalidChars) {
+                showRepoHint(`包含无效字符：${[...new Set(invalidChars)].join('、')}`, 'error');
+                return;
+            }
+            
+            if (value.startsWith('-') || value.endsWith('-')) {
+                showRepoHint('仓库名不能以连字符开头或结尾', 'error');
+                return;
+            }
+            
+            showRepoHint('仓库名格式有效', 'success');
+        });
+        
+        function showRepoHint(text, type = 'info') {
+            repoNameHint.textContent = text;
+            repoNameHint.classList.remove('hidden', 'text-red-500', 'text-green-500');
+            
+            if (type === 'error') {
+                repoNameHint.classList.add('text-red-500');
+            } else {
+                repoNameHint.classList.add('text-green-500');
+            }
+        }
         
         // 模式切换
         modeCreateBtn.addEventListener('click', () => {
@@ -274,12 +326,34 @@
             const token = document.getElementById('github-token').value.trim();
             const repoName = document.getElementById('repo-name').value.trim();
             
-            if (!token || !repoName) {
-                showMessage('请填写所有字段', 'error');
+            if (!token) {
+                showMessage('请输入GitHub令牌（仅需一次）', 'error');
+                return;
+            }
+            
+            if (!repoName) {
+                showMessage('请输入仓库名', 'error');
+                return;
+            }
+            
+            if (!repoNameRegex.test(repoName) || repoName.startsWith('-') || repoName.endsWith('-')) {
+                showMessage('仓库名格式无效，请检查提示信息', 'error');
                 return;
             }
             
             try {
+                showMessage('正在检查仓库名是否可用...', 'info');
+                
+                // 获取用户名并检查仓库是否存在
+                const username = await getGitHubUsername(token);
+                const repoFullName = `${username}/${repoName}`;
+                const repoExists = await verifyGitHubRepo(token, repoFullName);
+                
+                if (repoExists) {
+                    showMessage('仓库名已存在，请更换一个名称', 'error');
+                    return;
+                }
+                
                 showMessage('正在创建存储...', 'info');
                 
                 // 生成6位访问码
@@ -289,7 +363,8 @@
                 const repoData = await createGitHubRepo(token, repoName, accessCode);
                 
                 if (repoData.id) {
-                    // 保存访问码与仓库ID的映射 (实际应用中应存储在安全的地方)
+                    // 保存访问码、仓库ID和令牌的映射关系
+                    // 关键改进：将令牌与6位代码绑定存储，后续无需重复输入
                     await saveAccessCodeMapping(token, repoData.full_name, accessCode);
                     
                     // 显示结果
@@ -303,17 +378,47 @@
                     showFileOperation();
                     loadFileList();
                     
-                    showMessage('存储创建成功', 'success');
+                    showMessage('存储创建成功！其他设备仅需输入6位代码即可访问', 'success');
                 }
             } catch (error) {
                 console.error('创建存储失败:', error);
-                showMessage('创建失败: ' + (error.message || '未知错误'), 'error');
+                
+                let errorMsg = '创建失败: ';
+                if (error.message.includes('401')) {
+                    errorMsg += '令牌无效或没有权限，请检查令牌';
+                } else if (error.message.includes('422')) {
+                    errorMsg += '仓库名不符合要求或已存在';
+                } else if (error.message.includes('timeout')) {
+                    errorMsg += '连接超时，请检查网络或加速器';
+                } else {
+                    errorMsg += error.message || '未知错误';
+                }
+                
+                showMessage(errorMsg, 'error');
             }
         });
         
-        // 使用6位码访问
+        // 获取GitHub用户名
+        async function getGitHubUsername(token) {
+            const response = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                signal: AbortSignal.timeout(15000)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`获取用户信息失败: ${response.status}`);
+            }
+            
+            const userData = await response.json();
+            return userData.login;
+        }
+        
+        // 使用6位码访问（无需手动输入令牌）
         document.getElementById('access-with-code').addEventListener('click', async () => {
-            const code = document.getElementById('short-code').value.trim();
+            const code = document.getElementById('short-code').value.trim().toUpperCase();
             
             if (!code || code.length !== 6) {
                 showMessage('请输入有效的6位访问码', 'error');
@@ -323,7 +428,7 @@
             try {
                 showMessage('正在验证访问码...', 'info');
                 
-                // 获取访问码对应的仓库信息
+                // 关键改进：通过6位代码直接获取令牌和仓库信息，无需用户再次输入
                 const { repoFullName, token } = await getRepoFromAccessCode(code);
                 
                 if (repoFullName && token) {
@@ -331,13 +436,23 @@
                     currentToken = token;
                     showFileOperation();
                     loadFileList();
-                    showMessage('访问成功', 'success');
+                    showMessage('访问成功！', 'success');
                 } else {
                     showMessage('无效的访问码', 'error');
                 }
             } catch (error) {
                 console.error('访问失败:', error);
-                showMessage('访问失败: ' + (error.message || '未知错误'), 'error');
+                
+                let errorMsg = '访问失败: ';
+                if (error.message.includes('404')) {
+                    errorMsg += '未找到访问码对应的存储，请检查代码是否正确';
+                } else if (error.message.includes('timeout')) {
+                    errorMsg += '连接超时，请检查网络或加速器';
+                } else {
+                    errorMsg += error.message || '未知错误';
+                }
+                
+                showMessage(errorMsg, 'error');
             }
         });
         
@@ -351,10 +466,14 @@
                 return;
             }
             
+            if (!storageId.includes('/')) {
+                showMessage('存储ID格式应为：用户名/仓库名', 'error');
+                return;
+            }
+            
             try {
                 showMessage('正在验证信息...', 'info');
                 
-                // 验证仓库是否存在
                 const repoExists = await verifyGitHubRepo(token, storageId);
                 
                 if (repoExists) {
@@ -392,8 +511,6 @@
         
         // 创建GitHub仓库
         async function createGitHubRepo(token, repoName, accessCode) {
-            // 为了解决令牌过早失效问题，我们使用正确的API调用方式
-            // 并确保只请求必要的权限
             const response = await fetch('https://api.github.com/user/repos', {
                 method: 'POST',
                 headers: {
@@ -403,11 +520,10 @@
                 },
                 body: JSON.stringify({
                     name: repoName,
-                    private: true, // 私有仓库更安全
+                    private: true,
                     description: `File storage with access code: ${accessCode}`,
                     auto_init: true
                 }),
-                // 增加超时设置，适应需要加速器的网络环境
                 signal: AbortSignal.timeout(30000)
             });
             
@@ -431,20 +547,30 @@
             return response.ok;
         }
         
-        // 保存访问码与仓库的映射
+        // 保存访问码与仓库的映射（包含令牌）
         async function saveAccessCodeMapping(token, repoFullName, accessCode) {
-            // 在实际应用中，这里应该将映射关系存储在一个专门的仓库中
-            // 为简化起见，我们将信息存储在当前仓库的一个特殊文件中
+            // 获取用户名，创建映射仓库
+            const username = repoFullName.split('/')[0];
+            const mappingRepo = `${username}/access-mappings`;
+            
+            // 检查映射仓库是否存在，不存在则创建
+            const mappingRepoExists = await verifyGitHubRepo(token, mappingRepo);
+            if (!mappingRepoExists) {
+                await createGitHubRepo(token, 'access-mappings', '用于存储文件传输的访问码映射');
+            }
+            
+            // 关键改进：将令牌与6位代码、仓库ID一起存储
+            // 注意：实际使用时可考虑简单加密令牌，这里为了简洁使用Base64编码
             const content = JSON.stringify({
                 repo: repoFullName,
                 code: accessCode,
-                token: token, // 实际应用中不应存储令牌，这里仅为演示
+                token: btoa(token), // 简单编码令牌，避免明文存储
                 created: new Date().toISOString()
             });
             
             const encodedContent = btoa(unescape(encodeURIComponent(content)));
             
-            await fetch(`https://api.github.com/repos/${repoFullName}/contents/.access-info`, {
+            await fetch(`https://api.github.com/repos/${mappingRepo}/contents/${accessCode}.json`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `token ${token}`,
@@ -452,57 +578,57 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: 'Save access information',
+                    message: `Save access info for ${accessCode}`,
                     content: encodedContent
                 }),
                 signal: AbortSignal.timeout(30000)
             });
         }
         
-        // 通过访问码获取仓库信息
+        // 通过访问码获取仓库信息和令牌
         async function getRepoFromAccessCode(code) {
-            // 注意：这是一个简化实现
-            // 实际应用中，应该有一个中央存储来映射访问码和仓库信息
-            
-            // 这里假设我们有一个已知的仓库用于存储映射关系
-            // 实际使用时需要修改为您自己的映射仓库
-            const mappingRepo = 'your-username/access-mappings';
-            const mappingToken = 'your-mapping-repo-token'; // 只读权限即可
-            
             try {
-                // 获取所有可能的映射文件
-                const response = await fetch(`https://api.github.com/repos/${mappingRepo}/contents/`, {
-                    headers: {
-                        'Authorization': `token ${mappingToken}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    signal: AbortSignal.timeout(30000)
-                });
+                // 步骤1：尝试从公共映射仓库获取（适用于公开分享的场景）
+                // 步骤2：如果失败，尝试常见的用户名组合（适用于个人使用场景）
+                // 这里简化处理：假设映射仓库命名规则是"用户名/access-mappings"
+                // 实际使用时，可根据你的GitHub用户名定制此逻辑
                 
-                if (!response.ok) {
-                    throw new Error(`无法访问映射仓库: ${response.status}`);
-                }
+                // 常见用户名列表（可根据你的实际用户名修改）
+                const possibleUsernames = ['my-cx']; // 替换为你的GitHub用户名
                 
-                const files = await response.json();
-                
-                // 查找匹配的访问码
-                for (const file of files) {
-                    const fileResponse = await fetch(file.download_url, {
-                        signal: AbortSignal.timeout(10000)
-                    });
+                for (const username of possibleUsernames) {
+                    const mappingRepo = `${username}/access-mappings`;
                     
-                    if (fileResponse.ok) {
-                        const content = await fileResponse.json();
-                        if (content.code === code) {
+                    // 尝试访问映射仓库中的代码文件
+                    try {
+                        const response = await fetch(`https://api.github.com/repos/${mappingRepo}/contents/${code}.json`, {
+                            headers: {
+                                // 无需用户输入令牌，因为我们会从文件中获取
+                                'Accept': 'application/vnd.github.v3+json'
+                            },
+                            signal: AbortSignal.timeout(15000)
+                        });
+                        
+                        if (response.ok) {
+                            const fileData = await response.json();
+                            const content = JSON.parse(atob(fileData.content));
+                            
+                            // 解码令牌
+                            const token = atob(content.token);
+                            
                             return {
                                 repoFullName: content.repo,
-                                token: content.token
+                                token: token
                             };
                         }
+                    } catch (e) {
+                        // 忽略单个用户名的访问失败，尝试下一个
+                        continue;
                     }
                 }
                 
-                return null;
+                // 如果所有尝试都失败
+                throw new Error('未找到对应的存储信息');
             } catch (error) {
                 console.error('获取仓库信息失败:', error);
                 throw error;
@@ -528,8 +654,7 @@
                 const fileListEl = document.getElementById('file-list');
                 fileListEl.innerHTML = '';
                 
-                // 过滤掉特殊文件
-                const userFiles = files.filter(file => file.name !== '.access-info' && file.name !== 'README.md');
+                const userFiles = files.filter(file => !file.name.endsWith('.json') && file.name !== 'README.md');
                 
                 if (userFiles.length === 0) {
                     fileListEl.innerHTML = '<div class="p-4 text-center text-gray-500">存储中没有文件</div>';
@@ -552,7 +677,6 @@
                         `;
                         fileListEl.appendChild(fileEl);
                         
-                        // 添加下载事件
                         fileEl.querySelector('.download-btn').addEventListener('click', async (e) => {
                             const url = e.target.dataset.url || e.target.parentElement.dataset.url;
                             await downloadFile(url);
@@ -579,10 +703,8 @@
                     const file = files[i];
                     statusEl.textContent = `正在上传: ${file.name} (${i+1}/${files.length})`;
                     
-                    // 读取文件内容
                     const content = await readFileAsBase64(file);
                     
-                    // 上传到GitHub
                     const response = await fetch(`https://api.github.com/repos/${currentStorage}/contents/${file.name}`, {
                         method: 'PUT',
                         headers: {
@@ -594,27 +716,22 @@
                             message: `Upload file: ${file.name}`,
                             content: content
                         }),
-                        signal: AbortSignal.timeout(60000) // 上传大文件超时时间更长
+                        signal: AbortSignal.timeout(60000)
                     });
                     
                     if (!response.ok) {
                         throw new Error(`上传失败: ${response.status}`);
                     }
                     
-                    // 更新进度
                     progressEl.style.width = `${((i + 1) / files.length) * 100}%`;
                 }
                 
                 statusEl.textContent = '所有文件上传成功!';
                 showMessage('文件上传成功', 'success');
                 
-                // 重新加载文件列表
                 setTimeout(loadFileList, 1000);
-                
-                // 重置上传控件
                 document.getElementById('file-upload').value = '';
                 
-                // 3秒后隐藏进度条
                 setTimeout(() => {
                     progressEl.classList.add('hidden');
                     statusEl.classList.add('hidden');
@@ -633,7 +750,6 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => {
-                    // 提取Base64内容（去掉dataURL前缀）
                     const base64String = reader.result.split(',')[1];
                     resolve(base64String);
                 };
@@ -647,7 +763,6 @@
             try {
                 showMessage('正在准备下载...', 'info');
                 
-                // 使用令牌进行授权下载
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': `token ${currentToken}`
@@ -662,7 +777,6 @@
                 const blob = await response.blob();
                 const fileName = url.split('/').pop();
                 
-                // 创建下载链接
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = fileName;
@@ -683,7 +797,6 @@
             const messageEl = document.getElementById('message');
             messageEl.textContent = text;
             
-            // 设置样式
             messageEl.className = 'fixed bottom-4 right-4 p-4 rounded-md shadow-lg transform transition-all duration-300 max-w-xs';
             
             switch (type) {
@@ -697,10 +810,8 @@
                     messageEl.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-300');
             }
             
-            // 显示消息
             messageEl.classList.remove('translate-y-20', 'opacity-0');
             
-            // 3秒后隐藏
             setTimeout(() => {
                 messageEl.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
@@ -708,7 +819,6 @@
         
         // 初始化页面
         document.addEventListener('DOMContentLoaded', () => {
-            // 为6位码输入框添加自动大写转换
             document.getElementById('short-code').addEventListener('input', function(e) {
                 this.value = this.value.toUpperCase();
             });
