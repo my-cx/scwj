@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub文件传输工具（调试版）</title>
+    <title>GitHub文件传输工具（修复版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -39,7 +39,7 @@
                 @apply bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded transition-all;
             }
             .card {
-                @apply bg-white rounded-lg shadow shadow-md p-6 transition-all hover:shadow-lg;
+                @apply bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg;
             }
             .debug-log {
                 @apply text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded;
@@ -53,9 +53,9 @@
     <div class="container mx-auto px-4 py-8 max-w-4xl">
         <header class="text-center mb-10">
             <h1 class="text-[clamp(1.8rem,5vw,2.5rem)] font-bold text-dark mb-2">
-                <i class="fa fa-github mr-2"></i>文件传输输工具（调试试版）
+                <i class="fa fa-github mr-2"></i>文件传输工具
             </h1>
-            <p class="text-secondary text-lg">带详细调试信息的版本，用于排查6位代码访问问题</p>
+            <p class="text-secondary text-lg">修复版 - 解决访问按钮无响应问题</p>
         </header>
 
         <!-- 模式选择器 -->
@@ -76,20 +76,14 @@
                 <i class="fa fa-plus-circle text-primary mr-2"></i>创建新存储
             </h2>
             
-            <div class="mb-4 p-3 bg-blue-50 border border border-blue-200 rounded text-sm text-blue-700">
-                <i class="fa fa-info-circle mr-1"></i>
-                <strong>调试提示：</strong>创建时的操作会被记录在下方日志中
-            </div>
-            
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1" for="github-token">GitHub 令牌</label>
                 <input 
                     type="password" 
                     id="github-token" 
-                    class="w-full px-3 py-2 border border border-gray-300 rounded-md input-focus"
-                    placeholder="输入你的GitHub令牌（仅需输入一次）"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
+                    placeholder="输入你的GitHub令牌"
                 >
-                <p class="text-xs text-gray-500 mt-1">需要具备repo权限的个人访问令牌</p>
             </div>
             
             <div class="mb-6">
@@ -100,7 +94,6 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
                     placeholder="例如：my-file-storage-001"
                 >
-                <p id="repo-name-hint" class="text-xs mt-1 hidden"></p>
             </div>
             
             <button id="create-storage" class="btn-primary w-full">
@@ -108,16 +101,15 @@
             </button>
             
             <div id="create-result" class="mt-4 hidden">
-                <div class="p-3 bg-green-100 border border border-green-400 rounded text-green-700">
-                    <h3 class="font-medium-medium mb-1">存储创建成功！</h3>
+                <div class="p-3 bg-green-100 border border-green-400 rounded text-green-700">
+                    <h3 class="font-medium mb-1">存储创建成功！</h3>
                     <p>存储ID: <span id="storage-id" class="font-mono bg-gray-200 px-2 py-1 rounded"></span></p>
                     <p>访问代码: <span id="access-code" class="font-mono bg-gray-200 px-2 py-1 rounded text-lg font-bold"></span></p>
-                    <p class="text-sm mt-2">在其他设备上，仅需输入这个6位代码即可访问</p>
                 </div>
             </div>
             
             <div id="create-debug-log" class="debug-log hidden">
-                <strong>调试创建日志：</strong>
+                <strong>创建日志：</strong>
                 <div id="create-log-content"></div>
             </div>
         </div>
@@ -128,22 +120,17 @@
                 <i class="fa fa-key text-primary mr-2"></i>访问存储
             </h2>
             
-            <div class="mb-4 p-3 bg-blue-50 border border border-blue-200 rounded text-sm text-blue-700">
-                <i class="fa fa-info-circle mr-1"></i>
-                <strong>调试提示：</strong>请输入6位代码并观察下方日志信息
-            </div>
-            
             <div class="mb-4">
                 <div class="flex items-center mb-1">
                     <label class="block text-sm font-medium text-gray-700">访问方式</label>
                 </div>
                 <div class="flex gap-2">
-                    <button id="access-code-btn" class="btn-primary flex-1">6位访问码（推荐）</button>
+                    <button id="access-code-btn" class="btn-primary flex-1">6位访问码</button>
                     <button id="full-id-btn" class="btn-secondary flex-1">完整存储ID</button>
                 </div>
             </div>
             
-            <!-- 6位访问码方式（无需输入令牌） -->
+            <!-- 6位访问码方式 -->
             <div id="code-access" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="short-code">6位访问码</label>
@@ -151,21 +138,19 @@
                         type="text" 
                         id="short-code" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus text-center text-xl"
-                        placeholder="输入6位代码（无需令牌）"
+                        placeholder="输入6位代码"
                         maxlength="6"
                     >
                 </div>
                 
-                <!-- 调试信息配置 -->
-                <div class="p-3 bg-gray-50 rounded">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">GitHub用户名（用于定位映射仓库）</label>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="github-username">GitHub用户名</label>
                     <input 
                         type="text" 
                         id="github-username" 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus text-sm"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
                         placeholder="输入你的GitHub用户名"
                     >
-                    <p class="text-xs text-gray-500 mt-1">必填项，用于查找你的映射仓库</p>
                 </div>
                 
                 <button id="access-with-code" class="btn-primary w-full">
@@ -181,7 +166,7 @@
                         type="text" 
                         id="full-storage-id" 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus"
-                        placeholder="输入完整存储ID（格式：用户名/仓库名）"
+                        placeholder="用户名/仓库名"
                     >
                 </div>
                 
@@ -200,7 +185,6 @@
                 </button>
             </div>
             
-            <!-- 调试日志 -->
             <div id="access-debug-log" class="debug-log hidden">
                 <strong>访问日志：</strong>
                 <div id="access-log-content"></div>
@@ -209,7 +193,7 @@
 
         <!-- 文件操作区域 -->
         <div id="file-operation" class="card mb-8 hidden">
-            <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <h2 class="text-xl font-semibold mb-4">
                 <i class="fa fa-folder-open text-primary mr-2"></i>存储内容
                 <span id="storage-info" class="ml-2 text-sm text-gray-500"></span>
             </h2>
@@ -237,415 +221,553 @@
         </div>
 
         <!-- 消息提示 -->
-        <div id="message" class="fixed bottom-4 right-4 p-4 rounded-md shadow-lg-lg transform transition-all duration-300 translate-y-20 opacity-0 max-w-xs"></div>
+        <div id="message" class="fixed bottom-4 right-4 p-4 rounded-md shadow-lg transform transition-all duration-300 translate-y-20 opacity-0 max-w-xs"></div>
     </div>
 
     <script>
-        // DOM元素
-        const modeCreateBtn = document.getElementById('mode-create');
-        const modeAccessBtn = document.getElementById('mode-access');
-        const createSection = document.getElementById('create-section');
-        const accessSection = document.getElementById('access-section');
-        const fileOperation = document.getElementById('file-operation');
-        const accessCodeBtn = document.getElementById('access-code-btn');
-        const fullIdBtn = document.getElementById('full-id-btn');
-        const codeAccess = document.getElementById('code-access');
-        const fullAccess = document.getElementById('full-access');
-        const repoNameInput = document.getElementById('repo-name');
-        const repoNameHint = document.getElementById('repo-name-hint');
-        const githubUsernameInput = document.getElementById('github-username');
-        
-        // 调试日志元素
-        const createDebugLog = document.getElementById('create-debug-log');
-        const createLogContent = document.getElementById('create-log-content');
-        const accessDebugLog = document.getElementById('access-debug-log');
-        const accessLogContent = document.getElementById('access-log-content');
-        
-        // 状态变量
-        let currentStorage = null;
-        let currentToken = null;
-        
-        // 仓库名验证正则
-        const repoNameRegex = /^[a-zA-Z0-9_\-.]{1,100}$/;
-        const invalidCharsRegex = /[^a-zA-Z0-9_\-.]/g;
-        
-        // 添加调试日志
-        function addCreateLog(message) {
-            createDebugLog.classList.remove('hidden');
-            const timestamp = new Date().toLocaleTimeString();
-            createLogContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            createLogContent.scrollTop = createLogContent.scrollHeight;
-        }
-        
-        function addAccessLog(message) {
-            accessDebugLog.classList.remove('hidden');
-            const timestamp = new Date().toLocaleTimeString();
-            accessLogContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            accessLogContent.scrollTop = accessLogContent.scrollHeight;
-        }
-        
-        // 监听仓库名输入，实时验证
-        repoNameInput.addEventListener('input', () => {
-            const value = repoNameInput.value;
+        // 修复核心：确保所有DOM元素正确加载后再绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始初始化...');
             
-            if (value.length === 0) {
-                repoNameHint.classList.add('hidden');
+            // DOM元素
+            const modeCreateBtn = document.getElementById('mode-create');
+            const modeAccessBtn = document.getElementById('mode-access');
+            const createSection = document.getElementById('create-section');
+            const accessSection = document.getElementById('access-section');
+            const fileOperation = document.getElementById('file-operation');
+            const accessCodeBtn = document.getElementById('access-code-btn');
+            const fullIdBtn = document.getElementById('full-id-btn');
+            const codeAccess = document.getElementById('code-access');
+            const fullAccess = document.getElementById('full-access');
+            const accessWithCodeBtn = document.getElementById('access-with-code');
+            
+            // 调试日志元素
+            const createDebugLog = document.getElementById('create-debug-log');
+            const createLogContent = document.getElementById('create-log-content');
+            const accessDebugLog = document.getElementById('access-debug-log');
+            const accessLogContent = document.getElementById('access-log-content');
+            
+            // 状态变量
+            let currentStorage = null;
+            let currentToken = null;
+            
+            // 确保按钮存在
+            if (!accessWithCodeBtn) {
+                console.error('未找到访问按钮元素，请检查ID是否正确');
+                showMessage('页面加载错误：未找到访问按钮', 'error');
                 return;
             }
             
-            if (value.length > 100) {
-                showRepoHint(`仓库名过长（最多100个字符），当前${value.length}个字符`, 'error');
-                return;
+            // 添加日志函数
+            function addCreateLog(message) {
+                createDebugLog.classList.remove('hidden');
+                const timestamp = new Date().toLocaleTimeString();
+                createLogContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                createLogContent.scrollTop = createLogContent.scrollHeight;
             }
             
-            const invalidChars = value.match(invalidCharsRegex);
-            if (invalidChars) {
-                showRepoHint(`包含无效字符：${[...new Set(invalidChars)].join('、')}`, 'error');
-                return;
+            function addAccessLog(message) {
+                accessDebugLog.classList.remove('hidden');
+                const timestamp = new Date().toLocaleTimeString();
+                accessLogContent.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                accessLogContent.scrollTop = accessLogContent.scrollHeight;
             }
             
-            if (value.startsWith('-') || value.endsWith('-')) {
-                showRepoHint('仓库名不能以连字符开头或结尾', 'error');
-                return;
-            }
+            // 模式切换
+            modeCreateBtn.addEventListener('click', () => {
+                console.log('切换到创建模式');
+                createSection.classList.remove('hidden');
+                accessSection.classList.add('hidden');
+                fileOperation.classList.add('hidden');
+                modeCreateBtn.classList.remove('btn-secondary');
+                modeCreateBtn.classList.add('btn-primary');
+                modeAccessBtn.classList.remove('btn-primary');
+                modeAccessBtn.classList.add('btn-secondary');
+            });
             
-            showRepoHint('仓库名格式有效', 'success');
-        });
-        
-        function showRepoHint(text, type = 'info') {
-            repoNameHint.textContent = text;
-            repoNameHint.classList.remove('hidden', 'text-red-500', 'text-green-500');
+            modeAccessBtn.addEventListener('click', () => {
+                console.log('切换到访问模式');
+                createSection.classList.add('hidden');
+                accessSection.classList.remove('hidden');
+                fileOperation.classList.add('hidden');
+                modeCreateBtn.classList.remove('btn-primary');
+                modeCreateBtn.classList.add('btn-secondary');
+                modeAccessBtn.classList.remove('btn-secondary');
+                modeAccessBtn.classList.add('btn-primary');
+            });
             
-            if (type === 'error') {
-                repoNameHint.classList.add('text-red-500');
-            } else {
-                repoNameHint.classList.add('text-green-500');
-            }
-        }
-        
-        // 模式切换
-        modeCreateBtn.addEventListener('click', () => {
-            createSection.classList.remove('hidden');
-            accessSection.classList.add('hidden');
-            fileOperation.classList.add('hidden');
-            modeCreateBtn.classList.remove('btn-secondary');
-            modeCreateBtn.classList.add('btn-primary');
-            modeAccessBtn.classList.remove('btn-primary');
-            modeAccessBtn.classList.add('btn-secondary');
-        });
-        
-        modeAccessBtn.addEventListener('click', () => {
-            createSection.classList.add('hidden');
-            accessSection.classList.remove('hidden');
-            fileOperation.classList.add('hidden');
-            modeCreateBtn.classList.remove('btn-primary');
-            modeCreateBtn.classList.add('btn-secondary');
-            modeAccessBtn.classList.remove('btn-secondary');
-            modeAccessBtn.classList.add('btn-primary');
-        });
-        
-        // 访问方式切换
-        accessCodeBtn.addEventListener('click', () => {
-            codeAccess.classList.remove('hidden');
-            fullAccess.classList.add('hidden');
-            accessCodeBtn.classList.remove('btn-secondary');
-            accessCodeBtn.classList.add('btn-primary');
-            fullIdBtn.classList.remove('btn-primary');
-            fullIdBtn.classList.add('btn-secondary');
-        });
-        
-        fullIdBtn.addEventListener('click', () => {
-            codeAccess.classList.add('hidden');
-            fullAccess.classList.remove('hidden');
-            accessCodeBtn.classList.remove('btn-primary');
-            accessCodeBtn.classList.add('btn-secondary');
-            fullIdBtn.classList.remove('btn-secondary');
-            fullIdBtn.classList.add('btn-primary');
-        });
-        
-        // 上传按钮点击事件
-        document.getElementById('upload-btn').addEventListener('click', () => {
-            document.getElementById('file-upload').click();
-        });
-        
-        // 文件选择处理
-        document.getElementById('file-upload').addEventListener('change', async (e) => {
-            const files = e.target.files;
-            if (files.length > 0 && currentStorage && currentToken) {
-                await uploadFiles(files);
-            }
-        });
-        
-        // 创建存储
-        document.getElementById('create-storage').addEventListener('click', async () => {
-            // 清空之前的日志
-            createLogContent.innerHTML = '';
-            addCreateLog('开始创建存储流程...');
+            // 访问方式切换
+            accessCodeBtn.addEventListener('click', () => {
+                console.log('切换到6位码访问');
+                codeAccess.classList.remove('hidden');
+                fullAccess.classList.add('hidden');
+                accessCodeBtn.classList.remove('btn-secondary');
+                accessCodeBtn.classList.add('btn-primary');
+                fullIdBtn.classList.remove('btn-primary');
+                fullIdBtn.classList.add('btn-secondary');
+            });
             
-            const token = document.getElementById('github-token').value.trim();
-            const repoName = document.getElementById('repo-name').value.trim();
+            fullIdBtn.addEventListener('click', () => {
+                console.log('切换到完整ID访问');
+                codeAccess.classList.add('hidden');
+                fullAccess.classList.remove('hidden');
+                accessCodeBtn.classList.remove('btn-primary');
+                accessCodeBtn.classList.add('btn-secondary');
+                fullIdBtn.classList.remove('btn-secondary');
+                fullIdBtn.classList.add('btn-primary');
+            });
             
-            if (!token) {
-                addCreateLog('错误：未输入GitHub令牌');
-                showMessage('请输入GitHub令牌（仅需一次）', 'error');
-                return;
-            }
-            
-            if (!repoName) {
-                addCreateLog('错误：未输入仓库名');
-                showMessage('请输入仓库名', 'error');
-                return;
-            }
-            
-            if (!repoNameRegex.test(repoName) || repoName.startsWith('-') || repoName.endsWith('-')) {
-                addCreateLog(`错误：仓库名格式无效 - ${repoName}`);
-                showMessage('仓库名格式无效，请检查提示信息', 'error');
-                return;
-            }
-            
-            try {
-                addCreateLog('正在检查仓库名是否可用...');
-                showMessage('正在检查仓库名是否可用...', 'info');
+            // 6位访问码按钮点击事件 - 修复核心部分
+            accessWithCodeBtn.addEventListener('click', async function() {
+                console.log('检测到访问按钮点击，开始处理...');
+                addAccessLog('访问按钮被点击，开始处理流程');
                 
-                // 获取用户名并检查仓库是否存在
-                addCreateLog('尝试获取GitHubHub用户名...');
-                const username = await getGitHubUsername(token);
-                addCreateLog(`成功功获取用户名：${username}`);
-                
-                const repoFullName = `${username}/${repoName}`;
-                addCreateLog(`检查仓库是否存在：${repoFullName}`);
-                
-                const repoExists = await verifyGitHubRepo(token, repoFullName);
-                
-                if (repoExists) {
-                    addCreateLog('错误：仓库名已存在');
-                    showMessage('仓库名已存在，请更换一个名称', 'error');
-                    return;
-                }
-                
-                addCreateLog('仓库名可用，开始创建存储...');
-                showMessage('正在创建存储...', 'info');
-                
-                // 生成6位访问码
-                const accessCode = generateAccessCode();
-                addCreateLog(`生成6位访问码：${accessCode}`);
-                
-                // 创建仓库
-                addCreateLog(`开始创建仓库：${repoName}`);
-                const repoData = await createGitHubRepo(token, repoName, accessCode);
-                
-                if (repoData.id) {
-                    addCreateLog(`仓库创建成功：${repoData.full_name} (ID: ${repoData.id})`);
+                try {
+                    const code = document.getElementById('short-code').value.trim().toUpperCase();
+                    const username = document.getElementById('github-username').value.trim();
                     
-                    // 保存访问码、仓库ID和令牌的映射关系
-                    addCreateLog('开始保存访问码映射关系...');
+                    addAccessLog(`获取到的访问码: ${code}, 用户名: ${username}`);
+                    
+                    if (!username) {
+                        addAccessLog('错误：未输入GitHub用户名');
+                        showMessage('请输入你的GitHub用户名', 'error');
+                        return;
+                    }
+                    
+                    if (!code || code.length !== 6) {
+                        addAccessLog(`错误：无效的6位代码 (长度: ${code.length})`);
+                        showMessage('请输入有效的6位访问码', 'error');
+                        return;
+                    }
+                    
+                    showMessage('正在验证访问码...', 'info');
+                    addAccessLog('开始验证访问码...');
+                    
+                    // 获取映射信息
+                    const { repoFullName, token } = await getRepoFromAccessCode(code, username);
+                    
+                    if (repoFullName && token) {
+                        addAccessLog(`验证成功，仓库信息: ${repoFullName}`);
+                        currentStorage = repoFullName;
+                        currentToken = token;
+                        showFileOperation();
+                        loadFileList();
+                        showMessage('访问成功！', 'success');
+                    } else {
+                        addAccessLog('验证失败：未找到对应的仓库信息');
+                        showMessage('无效的访问码或用户名', 'error');
+                    }
+                } catch (error) {
+                    console.error('访问处理错误:', error);
+                    addAccessLog(`处理错误: ${error.message}`);
+                    showMessage('访问失败: ' + error.message, 'error');
+                }
+            });
+            
+            // 创建存储按钮事件
+            document.getElementById('create-storage').addEventListener('click', async function() {
+                createLogContent.innerHTML = '';
+                addCreateLog('开始创建存储流程');
+                
+                try {
+                    const token = document.getElementById('github-token').value.trim();
+                    const repoName = document.getElementById('repo-name').value.trim();
+                    
+                    if (!token) {
+                        addCreateLog('错误：未输入令牌');
+                        showMessage('请输入GitHub令牌', 'error');
+                        return;
+                    }
+                    
+                    if (!repoName) {
+                        addCreateLog('错误：未输入仓库名');
+                        showMessage('请输入仓库名', 'error');
+                        return;
+                    }
+                    
+                    addCreateLog('获取用户名...');
+                    const username = await getGitHubUsername(token);
+                    addCreateLog(`获取用户名成功: ${username}`);
+                    
+                    const repoFullName = `${username}/${repoName}`;
+                    addCreateLog(`检查仓库是否存在: ${repoFullName}`);
+                    
+                    const repoExists = await verifyGitHubRepo(token, repoFullName);
+                    if (repoExists) {
+                        addCreateLog('错误：仓库已存在');
+                        showMessage('仓库名已存在，请更换', 'error');
+                        return;
+                    }
+                    
+                    // 生成6位访问码
+                    const accessCode = generateAccessCode();
+                    addCreateLog(`生成访问码: ${accessCode}`);
+                    
+                    // 创建仓库
+                    addCreateLog('创建仓库中...');
+                    const repoData = await createGitHubRepo(token, repoName, accessCode);
+                    addCreateLog(`仓库创建成功: ${repoData.full_name}`);
+                    
+                    // 保存映射关系
+                    addCreateLog('保存访问码映射...');
                     await saveAccessCodeMapping(token, repoData.full_name, accessCode);
-                    addCreateLog('访问码映射关系保存成功');
                     
                     // 显示结果
                     document.getElementById('storage-id').textContent = repoData.full_name;
                     document.getElementById('access-code').textContent = accessCode;
                     document.getElementById('create-result').classList.remove('hidden');
                     
-                    // 自动切换到文件操作
                     currentStorage = repoData.full_name;
                     currentToken = token;
                     showFileOperation();
                     loadFileList();
                     
-                    addCreateLog('存储创建流程完成');
-                    showMessage('存储创建成功！其他设备仅需输入6位代码即可访问', 'success');
+                    showMessage('存储创建成功！', 'success');
+                } catch (error) {
+                    console.error('创建存储错误:', error);
+                    addCreateLog(`创建失败: ${error.message}`);
+                    showMessage('创建失败: ' + error.message, 'error');
                 }
-            } catch (error) {
-                console.error('创建存储失败:', error);
-                addCreateLog(`创建失败: ${error.message || '未知错误'}`);
-                
-                let errorMsg = '创建失败: ';
-                if (error.message.includes('401')) {
-                    errorMsg += '令牌无效或没有权限，请检查令牌';
-                } else if (error.message.includes('422')) {
-                    errorMsg += '仓库名不符合符合要求或已存在';
-                } else if (error.message.includes('timeout')) {
-                    errorMsg += '连接超时，请检查网络或加速器';
-                } else {
-                    errorMsg += error.message || '未知错误';
-                }
-                
-                showMessage(errorMsg, 'error');
-            }
-        });
-        
-        // 获取GitHub用户名
-        async function getGitHubUsername(token) {
-            try {
-                addCreateLog('调用GitHubHub API API API获取用户信息...');
-                return fetch('https://api.github.com/user', {
-                    headers: {
-                        'Authorization': `tokenen ${token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                })
-                .then(response => {
-                    addCreateLog(`GitHub API响应状态：${response.status}`);
-                    if (!response.ok) {
-                        throw new Error(`获取取用户信息失败: ${response.status} ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(userData => {
-                    addCreateLog(`成功解析用户信息，用户名：${userData.login}`);
-                    return userData.login;
-                });
-            } catch (error) {
-                addCreateLog(`获取用户名失败: ${error.message}`);
-                throw error;
-            }
-        }
-        
-        // 使用6位码访问（无需手动输入令牌）
-        document.getElementById('access-with-code').addEventListener('click', async () => {
-            // 清空之前的日志
-            accessLogContent.innerHTML = '';
-            addAccessLog('开始6位代码访问流程...');
-            
-            const code = document.getElementById('short-code').value.trim().toUpperCase();
-            const username = document.getElementById('github-username').value.trim();
-            
-            if (!username) {
-                addAccessLog('错误：未输入GitHub用户名');
-                showMessage('请输入你的GitHub用户名（用于定位映射仓库）', 'error');
-                return;
-            }
-            
-            if (!code || code.length !== 6) {
-                addAccessLog(`错误：无效的6位代码 - ${code}`);
-                showMessage('请输入有效的6位访问码', 'error');
-                return;
-            }
-            
-            try {
-                addAccessLog(`验证6位代码：${code}，用户名为：${username}`);
-                showMessage('正在验证访问码...', 'info');
-                
-                // 通过6位代码获取仓库信息和令牌
-                addAccessLog('尝试通过6位代码获取仓库信息...');
-                const { repoFullName, token } = await getRepoFromAccessCode(code, username);
-                
-                if (repoFullName && token) {
-                    addAccessLog(`成功功获取仓库信息：${repoFullName}`);
-                    currentStorage = repoFullName;
-                    currentToken = token;
-                    showFileOperation();
-                    loadFileList();
-                    addAccessLog('6位代码访问流程完成，访问成功');
-                    showMessage('访问成功！', 'success');
-                } else {
-                    addAccessLog('错误：未找到有效的仓库信息');
-                    showMessage('无效的访问码', 'error');
-                }
-            } catch (error) {
-                console.error('访问失败:', error);
-                addAccessLog(`访问失败: ${error.message || '未知错误'}`);
-                
-                let errorMsg = '访问失败: ';
-                if (error.message.includes('404')) {
-                    errorMsg += '未找到到访问码对应的存储，请检查代码和用户名是否正确';
-                } else if (error.message.includes('403')) {
-                    errorMsg += '没有访问权限，映射仓库可能是私有的';
-                } else if (error.message.includes('timeout')) {
-                    errorMsg += '连接超时，请检查网络或加速器';
-                } else {
-                    errorMsg += error.message || '未知错误';
-                }
-                
-                showMessage(errorMsg, 'error');
-            }
-        });
-        
-        // 使用完整信息访问
-        document.getElementById('access-with-full').addEventListener('click', async () => {
-            const storageId = document.getElementById('full-storage-id').value.trim();
-            const token = document.getElementById('access-token').value.trim();
-            
-            if (!storageId || !token) {
-                showMessage('请填写所有字段', 'error');
-                return;
-            }
-            
-            if (!storageId.includes('/')) {
-                showMessage('存储ID格式应为：用户名/仓库名', 'error');
-                return;
-            }
-            
-            try {
-                showMessage('正在验证信息...', 'info');
-                
-                const repoExists = await verifyGitHubRepo(token, storageId);
-                
-                if (repoExists) {
-                    currentStorage = storageId;
-                    currentToken = token;
-                    showFileOperation();
-                    loadFileList();
-                    showMessage('访问成功', 'success');
-                } else {
-                    showMessage('存储ID或令牌无效', 'error');
-                }
-            } catch (error) {
-                console.error('访问失败:', error);
-                showMessage('访问失败: ' + (error.message || '未知错误'), 'error');
-            }
-        });
-        
-        // 显示文件操作区域
-        function showFileOperation() {
-            createSection.classList.add('hidden');
-            accessSection.classList.add('hidden');
-            fileOperation.classList.remove('hidden');
-            document.getElementById('storage-info').textContent = currentStorage;
-        }
-        
-        // 生成6位访问码
-        function generateAccessCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAts.charAtAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
-        }
-        
-        // 创建GitHub仓库
-        async function createGitHubRepo(token, repoName, accessCode) {
-            return fetch('https://api.github.com/user/repos', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: repoName,
-                    private: true,
-                    description: `File storage with access code: ${accessCode}`,
-                    auto_init: true
-                }),
-                signal: AbortSignal.timeout(30000)
-            })
-            .then(response => {
-                addCreateLog(`创建仓库API响应状态：${response.status}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
-                }
-                return response.json();
             });
-        }
-        
-        // 验证GitHub仓库是否存在
-        async function verifyGitHubRepo(token, repoFullName) {
-            return fetchch(`https://api.github.com/repos/${repoFullName}`, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd/vnd.github.v3+json'
-                },
+            
+            // 上传文件相关
+            document.getElementById('upload-btn').addEventListener('click', () => {
+                document.getElementById('file-upload').click();
+            });
+            
+            document.getElementById('file-upload').addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (files.length > 0 && currentStorage && currentToken) {
+                    await uploadFiles(files);
+                }
+            });
+            
+            // 使用完整信息访问
+            document.getElementById('access-with-full').addEventListener('click', async function() {
+                const storageId = document.getElementById('full-storage-id').value.trim();
+                const token = document.getElementById('access-token').value.trim();
+                
+                if (!storageId || !token) {
+                    showMessage('请填写所有字段', 'error');
+                    return;
+                }
+                
+                try {
+                    const repoExists = await verifyGitHubRepo(token, storageId);
+                    
+                    if (repoExists) {
+                        currentStorage = storageId;
+                        currentToken = token;
+                        showFileOperation();
+                        loadFileList();
+                        showMessage('访问成功', 'success');
+                    } else {
+                        showMessage('存储ID或令牌无效', 'error');
+                    }
+                } catch (error) {
+                    showMessage('访问失败: ' + error.message, 'error');
+                }
+            });
+            
+            // 辅助函数
+            function showFileOperation() {
+                createSection.classList.add('hidden');
+                accessSection.classList.add('hidden');
+                fileOperation.classList.remove('hidden');
+                document.getElementById('storage-info').textContent = currentStorage;
+            }
+            
+            function generateAccessCode() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let code = '';
+                for (let i = 0; i < 6; i++) {
+                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return code;
+            }
+            
+            function showMessage(text, type = 'info') {
+                const messageEl = document.getElementById('message');
+                messageEl.textContent = text;
+                
+                messageEl.className = 'fixed bottom-4 right-4 p-4 rounded-md shadow-lg transform transition-all duration-300 max-w-xs';
+                
+                switch (type) {
+                    case 'success':
+                        messageEl.classList.add('bg-green-100', 'text-green-800', 'border', 'border-green-300');
+                        break;
+                    case 'error':
+                        messageEl.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-300');
+                        break;
+                    default:
+                        messageEl.classList.add('bg-blue-100', 'text-blue-800', 'border', 'border-blue-300');
+                }
+                
+                messageEl.classList.remove('translate-y-20', 'opacity-0');
+                
+                setTimeout(() => {
+                    messageEl.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+            
+            // GitHub API相关函数
+            async function getGitHubUsername(token) {
+                const response = await fetch('https://api.github.com/user', {
+                    headers: { 'Authorization': `token ${token}` },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`获取用户信息失败 (${response.status})`);
+                }
+                
+                const userData = await response.json();
+                return userData.login;
+            }
+            
+            async function verifyGitHubRepo(token, repoFullName) {
+                const response = await fetch(`https://api.github.com/repos/${repoFullName}`, {
+                    headers: { 'Authorization': `token ${token}` },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                return response.ok;
+            }
+            
+            async function createGitHubRepo(token, repoName, accessCode) {
+                const response = await fetch('https://api.github.com/user/repos', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: repoName,
+                        private: true,
+                        description: `File storage (access code: ${accessCode})`,
+                        auto_init: true
+                    }),
+                    signal: AbortSignal.timeout(30000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`创建仓库失败 (${response.status})`);
+                }
+                
+                return response.json();
+            }
+            
+            async function saveAccessCodeMapping(token, repoFullName, accessCode) {
+                const [username] = repoFullName.split('/');
+                const mappingRepo = `${username}/access-mappings`;
+                
+                // 检查映射仓库是否存在，不存在则创建
+                const mappingRepoExists = await verifyGitHubRepo(token, mappingRepo);
+                if (!mappingRepoExists) {
+                    await createGitHubRepo(token, 'access-mappings', '存储访问码映射关系');
+                }
+                
+                // 保存映射信息（包含令牌）
+                const content = JSON.stringify({
+                    repo: repoFullName,
+                    token: btoa(token), // 简单编码
+                    created: new Date().toISOString()
+                });
+                
+                const encodedContent = btoa(unescape(encodeURIComponent(content)));
+                
+                const response = await fetch(`https://api.github.com/repos/${mappingRepo}/contents/${accessCode}.json`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add access code ${accessCode}`,
+                        content: encodedContent
+                    }),
+                    signal: AbortSignal.timeout(30000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`保存映射失败 (${response.status})`);
+                }
+            }
+            
+            async function getRepoFromAccessCode(code, username) {
+                const mappingRepo = `${username}/access-mappings`;
+                
+                addAccessLog(`尝试访问映射仓库: ${mappingRepo}`);
+                
+                const response = await fetch(`https://api.github.com/repos/${mappingRepo}/contents/${code}.json`, {
+                    headers: { 'Accept': 'application/vnd.github.v3+json' },
+                    signal: AbortSignal.timeout(15000)
+                });
+                
+                addAccessLog(`映射仓库响应状态: ${response.status}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('未找到访问码对应的映射信息');
+                    }
+                    if (response.status === 403) {
+                        throw new Error('没有访问权限，请确保映射仓库是公开的或令牌正确');
+                    }
+                    throw new Error(`访问映射仓库失败 (${response.status})`);
+                }
+                
+                const fileData = await response.json();
+                const content = JSON.parse(atob(fileData.content));
+                
+                return {
+                    repoFullName: content.repo,
+                    token: atob(content.token)
+                };
+            }
+            
+            async function loadFileList() {
+                try {
+                    const response = await fetch(`https://api.github.com/repos/${currentStorage}/contents/`, {
+                        headers: { 'Authorization': `token ${currentToken}` },
+                        signal: AbortSignal.timeout(30000)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`加载文件列表失败 (${response.status})`);
+                    }
+                    
+                    const files = await response.json();
+                    const fileListEl = document.getElementById('file-list');
+                    fileListEl.innerHTML = '';
+                    
+                    const userFiles = files.filter(file => !file.name.endsWith('.json') && file.name !== 'README.md');
+                    
+                    if (userFiles.length === 0) {
+                        fileListEl.innerHTML = '<div class="p-4 text-center text-gray-500">存储中没有文件</div>';
+                        return;
+                    }
+                    
+                    userFiles.forEach(file => {
+                        const fileEl = document.createElement('div');
+                        fileEl.className = 'p-3 flex justify-between items-center hover:bg-gray-50';
+                        fileEl.innerHTML = `
+                            <div class="flex items-center">
+                                <i class="fa fa-file-o text-primary mr-2"></i>
+                                <span>${file.name}</span>
+                            </div>
+                            <button class="text-primary hover:text-primary/80 download-btn" 
+                                    data-url="${file.download_url}">
+                                <i class="fa fa-download"></i>
+                            </button>
+                        `;
+                        fileListEl.appendChild(fileEl);
+                        
+                        fileEl.querySelector('.download-btn').addEventListener('click', async (e) => {
+                            const url = e.target.dataset.url || e.target.parentElement.dataset.url;
+                            await downloadFile(url);
+                        });
+                    });
+                } catch (error) {
+                    showMessage('加载文件失败: ' + error.message, 'error');
+                }
+            }
+            
+            async function uploadFiles(files) {
+                const progressEl = document.getElementById('upload-progress');
+                const statusEl = document.getElementById('upload-status');
+                
+                progressEl.classList.remove('hidden');
+                statusEl.classList.remove('hidden');
+                progressEl.style.width = '0%';
+                
+                try {
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        statusEl.textContent = `正在上传: ${file.name} (${i+1}/${files.length})`;
+                        
+                        const content = await readFileAsBase64(file);
+                        
+                        const response = await fetch(`https://api.github.com/repos/${currentStorage}/contents/${file.name}`, {
+                            method: 'PUT',
+                            headers: { 
+                                'Authorization': `token ${currentToken}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                message: `Upload ${file.name}`,
+                                content: content
+                            }),
+                            signal: AbortSignal.timeout(60000)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`上传 ${file.name} 失败 (${response.status})`);
+                        }
+                        
+                        progressEl.style.width = `${((i + 1) / files.length) * 100}%`;
+                    }
+                    
+                    statusEl.textContent = '所有文件上传成功!';
+                    showMessage('文件上传成功', 'success');
+                    setTimeout(loadFileList, 1000);
+                    
+                    setTimeout(() => {
+                        progressEl.classList.add('hidden');
+                        statusEl.classList.add('hidden');
+                        progressEl.style.width = '0%';
+                    }, 3000);
+                } catch (error) {
+                    statusEl.textContent = `上传失败: ${error.message}`;
+                    statusEl.classList.add('text-danger');
+                    showMessage('文件上传失败: ' + error.message, 'error');
+                }
+            }
+            
+            function readFileAsBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64String = reader.result.split(',')[1];
+                        resolve(base64String);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+            
+            async function downloadFile(url) {
+                try {
+                    showMessage('正在准备下载...', 'info');
+                    
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `token ${currentToken}` },
+                        signal: AbortSignal.timeout(60000)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`下载失败 (${response.status})`);
+                    }
+                    
+                    const blob = await response.blob();
+                    const fileName = url.split('/').pop();
+                    
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    showMessage('文件下载成功', 'success');
+                } catch (error) {
+                    showMessage('下载失败: ' + error.message, 'error');
+                }
+            }
+            
+            // 初始化完成
+            console.log('初始化完成，访问按钮已绑定事件');
+            showMessage('页面加载完成，请使用6位代码访问', 'info');
+        });
+    </script>
+</body>
+</html>
